@@ -1,5 +1,6 @@
 open Expecto
 open System
+open System.IO
 open Day1
 
 let parseArgs (args: string []): Option<string> =
@@ -18,7 +19,12 @@ let main argv =
         match day with
         | "1" ->
             let _ = runTestsWithCLIArgs [] [||] tests
-            Day1.solve
+
+            let input =
+                File.ReadAllLines "day1.txt"
+                |> Array.map (fun s -> int s)
+
+            Day1.solve input
         | _ ->
             printfn $"Not implemented for day {day}"
             exit 1
