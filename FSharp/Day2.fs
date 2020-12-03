@@ -6,13 +6,25 @@ open System.Text.RegularExpressions
 
 let regex = new Regex("^(\d+)-(\d+) (.): (.+)")
 
-let parseLine inputLine =
+type Password =
+    { Min: int
+      Max: int
+      Char: string
+      Value: string }
+
+let parseLine (inputLine: string): Password =
     let m = regex.Match inputLine
 
-    {| Min = int m.Groups.[1].Value
-       Max = int m.Groups.[2].Value
-       Char = m.Groups.[3].Value
-       Password = m.Groups.[4].Value |}
+    { Min = int m.Groups.[1].Value
+      Max = int m.Groups.[2].Value
+      Char = m.Groups.[3].Value
+      Value = m.Groups.[4].Value }
+
+
+let validatePassword (input: Password): bool =
+    let matches = Regex.Matches(input.Value, input.Char)
+    let count = Seq.length matches
+    count >= input.Min && count <= input.Max
 
 /// "How many passwords are valid according to their policies?"
 let part1 input = input
@@ -29,10 +41,15 @@ let tests =
             let inputLine = "1-3 a: abcde"
 
             let expected =
-                {| Min = 1
-                   Max = 3
-                   Char = "a"
-                   Password = "abcde" |}
+                { Min = 1
+                  Max = 3
+                  Char = "a"
+                  Value = "abcde" }
 
             Expect.equal (parseLine inputLine) expected ""
+          }
+          test "Can validate password" {
+              let input = parseLine "1-3 a: abcde"
+
+              Expect.isTrue (validatePassword input) ""
           } ]
