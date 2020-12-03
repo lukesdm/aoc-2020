@@ -3,3 +3,5 @@ obj
 bin
 .fake
 .ionide
+.idea
+AoC2020.sln.DotSettings.user
