@@ -38,9 +38,9 @@ let part1 (input: string []): int =
     countTrees (parse input) { X = 3; Y = 1 }
 
 // *** PART 2 ***
-let treeCountProduct (input: Grid) (velocities: seq<Vec>): int =
+let treeCountProduct (input: Grid) (velocities: seq<Vec>): int64 =
     velocities
-    |> Seq.fold (fun acc vel -> (countTrees input vel) * acc) 1
+    |> Seq.fold (fun acc vel -> int64 (countTrees input vel) * acc) 1L
 
 let part2 input =
     let vels =
@@ -101,7 +101,7 @@ let tests =
                     { X = 1; Y = 2 } ]
 
               // "In the above example, these slopes would find 2, 7, 3, 4, and 2 tree(s) respectively; multiplied together, these produce the answer 336."
-              let totalProduct_expected = 336
+              let totalProduct_expected = 336L
 
               let totalProduct_actual = treeCountProduct input vels
 

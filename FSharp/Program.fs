@@ -16,7 +16,7 @@ let main argv =
             printfn "Usage: expected a single argument of the form {DAY}, e.g. '1'"
             exit 1
 
-    let result =
+    let result: Object =
         match day with
         | "1" ->
             let _ = runTestsWithCLIArgs [] [||] Day1.tests
@@ -25,19 +25,19 @@ let main argv =
                 File.ReadAllLines "day1.txt"
                 |> Array.map (fun s -> int s)
 
-            Day1.solve input
+            Day1.solve input :> Object
         | "2" ->
             let _ = runTestsWithCLIArgs [] [||] Day2.tests
 
             let input = File.ReadAllLines "day2.txt"
 
-            Day2.solve input
+            Day2.solve input :> Object
         | "3" ->
             let _ = runTestsWithCLIArgs [] [||] Day3.tests
 
             let input = File.ReadAllLines "day3.txt"
 
-            Day3.solve input
+            Day3.solve input :> Object
         | _ ->
             printfn $"Not implemented for day {day}"
             exit 1
