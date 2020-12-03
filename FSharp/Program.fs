@@ -30,7 +30,7 @@ let main argv =
             let _ = runTestsWithCLIArgs [] [||] Day2.tests
 
             let input = File.ReadAllLines "day2.txt"
-            
+
             Day2.solve input
         | _ ->
             printfn $"Not implemented for day {day}"
