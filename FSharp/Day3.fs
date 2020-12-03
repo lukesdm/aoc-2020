@@ -37,7 +37,37 @@ let countTrees (input: Grid) (velocity: Vec): int =
 let part1 (input: string []): int =
     countTrees (parse input) { X = 3; Y = 1 }
 
-let solve input = (part1 input, 0)
+// *** PART 2 ***
+let treeCountProduct (input: Grid) (velocities: seq<Vec>): int =
+    velocities
+    |> Seq.fold (fun acc vel -> (countTrees input vel) * acc) 1
+
+let part2 input =
+    let vels =
+        [ { X = 1; Y = 1 }
+          { X = 3; Y = 1 }
+          { X = 5; Y = 1 }
+          { X = 7; Y = 1 }
+          { X = 1; Y = 2 } ]
+
+    treeCountProduct (parse input) vels
+
+// ***...***
+
+let solve input = (part1 input, part2 input)
+
+let example =
+    [| "..##......."
+       "#...#...#.."
+       ".#....#..#."
+       "..#.#...#.#"
+       ".#...##..#."
+       "..#.##....."
+       ".#.#.#....#"
+       ".#........#"
+       "#.##...#..."
+       "#...##....#"
+       ".#..#...#.#" |]
 
 let tests =
     testList
@@ -51,19 +81,7 @@ let tests =
             Expect.equal (parse input) expected ""
           }
           test "Example - Counts trees correctly" {
-              let input =
-                  [| "..##......."
-                     "#...#...#.."
-                     ".#....#..#."
-                     "..#.#...#.#"
-                     ".#...##..#."
-                     "..#.##....."
-                     ".#.#.#....#"
-                     ".#........#"
-                     "#.##...#..."
-                     "#...##....#"
-                     ".#..#...#.#" |]
-                  |> parse
+              let input = parse example
 
               let vel: Vec = { X = 3; Y = 1 }
               let tc_expected = 7
@@ -71,4 +89,21 @@ let tests =
               let tc_actual = countTrees input vel
 
               Expect.equal tc_actual tc_expected ""
+          }
+          test "Part 2 - total trees for example" {
+              let input = parse example
+
+              let vels =
+                  [ { X = 1; Y = 1 }
+                    { X = 3; Y = 1 }
+                    { X = 5; Y = 1 }
+                    { X = 7; Y = 1 }
+                    { X = 1; Y = 2 } ]
+
+              // "In the above example, these slopes would find 2, 7, 3, 4, and 2 tree(s) respectively; multiplied together, these produce the answer 336."
+              let totalProduct_expected = 336
+
+              let totalProduct_actual = treeCountProduct input vels
+
+              Expect.equal totalProduct_actual totalProduct_expected ""
           } ]
