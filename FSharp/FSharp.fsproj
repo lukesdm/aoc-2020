@@ -6,6 +6,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Include="..\inputs\day3.txt" Link="day3.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Compile Include="Day3.fs" />
     <Content Include="..\inputs\day2.txt" Link="day2.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
