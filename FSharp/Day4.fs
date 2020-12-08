@@ -47,12 +47,22 @@ let yearValid (min: int) (max: int) (token: string): bool =
     | (true, year) when year >= min && year <= max -> true
     | _ -> false
 
+let heightValid (token: string): bool =
+    let ustart = token.Length - 2
+    let unit = token.[ustart..]
+
+    match System.Int32.TryParse token.[..ustart - 1] with
+    | (true, height) when unit = "cm" -> height >= 150 && height <= 193
+    | (true, height) when unit = "in" -> height >= 59 && height <= 76
+    | _ -> false
+
 let validateField (key: string) (value: string): bool =
     let validator =
         match key with
         | "byr" -> yearValid 1920 2002
         | "iyr" -> yearValid 2010 2020
         | "eyr" -> yearValid 2020 2030
+        | "hgt" -> heightValid
         | _ -> (fun _ -> false)
 
     validator value
@@ -98,6 +108,27 @@ let yearValidatorTests =
         (fun (input, expected) ->
             let description = $"year validity: {input} {expected}"
             test description { Expect.equal (yearValid 1920 2002 input) expected "" })
+
+//(Height) - a number followed by either cm or in:
+//If cm, the number must be at least 150 and at most 193.
+//If in, the number must be at least 59 and at most 76.
+let heightValidatorTests =
+    [ ("149cm", false)
+      ("150cm", true)
+      ("193cm", true)
+      ("194cm", false)
+      ("58in", false)
+      ("59in", true)
+      ("76in", true)
+      ("77in", false)
+      ("150", false)
+      ("cm", false)
+      ("abc", false)
+      ("a", false) ]
+    |> List.map
+        (fun (input, expected) ->
+            let description = $"height validity: {input} {expected}"
+            test description { Expect.equal (heightValid input) expected "" })
 
 let tests =
     testList
@@ -157,4 +188,4 @@ let tests =
 
                Expect.equal validCount_Expected validCount_Expected ""
            } ]
-         @ yearValidatorTests)
+         @ yearValidatorTests @ heightValidatorTests)
