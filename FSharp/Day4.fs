@@ -40,25 +40,19 @@ let isValid (record: Record): bool =
 let part1 (input: string): int =
     parseAll input |> Seq.filter isValid |> Seq.length
 
-let byrValid (token: string): bool =
+let yearValid (min: int) (max: int) (token: string): bool =
     let result = System.Int32.TryParse token
 
     match result with
-    | (true, year) when year >= 1920 && year <= 2002 -> true
-    | _ -> false
-
-let iyrValid (token: string): bool =
-    let result = System.Int32.TryParse token
-
-    match result with
-    | (true, year) when year >= 2010 && year <= 2020 -> true
+    | (true, year) when year >= min && year <= max -> true
     | _ -> false
 
 let validateField (key: string) (value: string): bool =
     let validator =
         match key with
-        | "byr" -> byrValid
-        | "iyr" -> iyrValid
+        | "byr" -> yearValid 1920 2002
+        | "iyr" -> yearValid 2010 2020
+        | "eyr" -> yearValid 2020 2030
         | _ -> (fun _ -> false)
 
     validator value
@@ -94,7 +88,7 @@ hgt:179cm
 hcl:#cfa07d eyr:2025 pid:166559648
 iyr:2011 ecl:brn hgt:59in"
 
-let byrTests =
+let yearValidatorTests =
     [ ("1919", false)
       ("1920", true)
       ("2002", true)
@@ -102,19 +96,8 @@ let byrTests =
       ("abc", false) ]
     |> List.map
         (fun (input, expected) ->
-            let description = $"byr validity: {input} {expected}"
-            test description { Expect.equal (byrValid input) expected "" })
-
-let iyrTests =
-    [ ("2009", false)
-      ("2010", true)
-      ("2020", true)
-      ("2021", false)
-      ("abc", false) ]
-    |> List.map
-        (fun (input, expected) ->
-            let description = $"iyr validity: {input} {expected}"
-            test description { Expect.equal (iyrValid input) expected "" })
+            let description = $"year validity: {input} {expected}"
+            test description { Expect.equal (yearValid 1920 2002 input) expected "" })
 
 let tests =
     testList
@@ -174,4 +157,4 @@ let tests =
 
                Expect.equal validCount_Expected validCount_Expected ""
            } ]
-         @ byrTests @ iyrTests)
+         @ yearValidatorTests)
