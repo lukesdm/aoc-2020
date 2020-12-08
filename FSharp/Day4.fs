@@ -1,4 +1,4 @@
-﻿// https://adventofcode.com/2020/day/4
+// https://adventofcode.com/2020/day/4
 module Day4
 
 open Expecto
@@ -40,6 +40,44 @@ let isValid (record: Record): bool =
 let part1 (input: string): int =
     parseAll input |> Seq.filter isValid |> Seq.length
 
+let byrValid (token: string): bool =
+    let result = System.Int32.TryParse token
+
+    match result with
+    | (true, year) when year >= 1920 && year <= 2002 -> true
+    | _ -> false
+
+let iyrValid (token: string): bool =
+    let result = System.Int32.TryParse token
+
+    match result with
+    | (true, year) when year >= 2010 && year <= 2020 -> true
+    | _ -> false
+
+let validateField (key: string) (value: string): bool =
+    let validator =
+        match key with
+        | "byr" -> byrValid
+        | "iyr" -> iyrValid
+        | _ -> (fun _ -> false)
+
+    validator value
+
+let validateFields (record: Record): bool =
+    let required =
+        Set.ofList [ "byr"
+                     // "cid"  <-- optional
+                     "iyr"
+                     "eyr"
+                     "hgt"
+                     "hcl"
+                     "ecl"
+                     "pid" ]
+
+
+    false
+
+
 let solve (input: string): (int * int) = part1 input, 0
 
 let example = "ecl:gry pid:860033327 eyr:2020 hcl:#fffffd
@@ -56,61 +94,84 @@ hgt:179cm
 hcl:#cfa07d eyr:2025 pid:166559648
 iyr:2011 ecl:brn hgt:59in"
 
+let byrTests =
+    [ ("1919", false)
+      ("1920", true)
+      ("2002", true)
+      ("2003", false)
+      ("abc", false) ]
+    |> List.map
+        (fun (input, expected) ->
+            let description = $"byr validity: {input} {expected}"
+            test description { Expect.equal (byrValid input) expected "" })
+
+let iyrTests =
+    [ ("2009", false)
+      ("2010", true)
+      ("2020", true)
+      ("2021", false)
+      ("abc", false) ]
+    |> List.map
+        (fun (input, expected) ->
+            let description = $"iyr validity: {input} {expected}"
+            test description { Expect.equal (iyrValid input) expected "" })
+
 let tests =
     testList
         "Day 4"
-        [ test "Can parse input - split into records" {
+        ([ test "Can parse input - split into records" {
             let recordCount_expected = 4
 
             let recordCount_actual = Seq.length (parseAll example)
 
             Expect.equal recordCount_actual recordCount_expected ""
-          }
-          test "Can parse input - split record into key-value-pairs (first)" {
-              let head_expected =
-                  [ ("ecl", "gry")
-                    ("pid", "860033327")
-                    ("eyr", "2020")
-                    ("hcl", "#fffffd")
-                    ("byr", "1937")
-                    ("iyr", "2017")
-                    ("cid", "147")
-                    ("hgt", "183cm") ]
+           }
+           test "Can parse input - split record into key-value-pairs (first)" {
+               let head_expected =
+                   [ ("ecl", "gry")
+                     ("pid", "860033327")
+                     ("eyr", "2020")
+                     ("hcl", "#fffffd")
+                     ("byr", "1937")
+                     ("iyr", "2017")
+                     ("cid", "147")
+                     ("hgt", "183cm") ]
 
-              let head_actual: Record = Seq.head (parseAll example)
+               let head_actual: Record = Seq.head (parseAll example)
 
-              Expect.equal (List.ofSeq head_actual) head_expected ""
-          }
-          test "Can validate known-good record" {
-              let record =
-                  [ ("ecl", "gry")
-                    ("pid", "860033327")
-                    ("eyr", "2020")
-                    ("hcl", "#fffffd")
-                    ("byr", "1937")
-                    ("iyr", "2017")
-                    ("cid", "147")
-                    ("hgt", "183cm") ]
+               Expect.equal (List.ofSeq head_actual) head_expected ""
+           }
+           test "Part 1 - Can validate known-good record" {
+               let record =
+                   [ ("ecl", "gry")
+                     ("pid", "860033327")
+                     ("eyr", "2020")
+                     ("hcl", "#fffffd")
+                     ("byr", "1937")
+                     ("iyr", "2017")
+                     ("cid", "147")
+                     ("hgt", "183cm") ]
 
-              Expect.isTrue (isValid record) ""
-          }
-          test "Can not validate known-bad record" {
-              // Missing hgt
-              let record =
-                  [ ("iyr", "2013")
-                    ("ecl", "amb")
-                    ("cid", "350")
-                    ("eyr", "2023")
-                    ("pid", "028048884")
-                    ("hcl", "#cfa07d")
-                    ("byr", "1929") ]
+               Expect.isTrue (isValid record) ""
+           }
+           test "Part 1 - Can not validate known-bad record" {
+               // Missing hgt
+               let record =
+                   [ ("iyr", "2013")
+                     ("ecl", "amb")
+                     ("cid", "350")
+                     ("eyr", "2023")
+                     ("pid", "028048884")
+                     ("hcl", "#cfa07d")
+                     ("byr", "1929") ]
 
-              Expect.isFalse (isValid record) ""
-          }
-          test "Validates all correctly" {
-              let validCount_Expected = 2
+               Expect.isFalse (isValid record) ""
+           }
+           test "Part 1 - Validates all correctly" {
+               let validCount_Expected = 2
 
-              let validCount_Actual = part1 example
+               let validCount_Actual = part1 example
 
-              Expect.equal validCount_Expected validCount_Expected ""
-          } ]
+               Expect.equal validCount_Expected validCount_Expected ""
+           } ]
+         @ byrTests @ iyrTests)
