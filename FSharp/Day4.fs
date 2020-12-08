@@ -2,6 +2,7 @@
 module Day4
 
 open Expecto
+open System.Text.RegularExpressions
 
 type Record = seq<string * string>
 
@@ -56,6 +57,24 @@ let heightValid (token: string): bool =
     | (true, height) when unit = "in" -> height >= 59 && height <= 76
     | _ -> false
 
+let hairColorRegex = new Regex("^#[0-9a-f]{6}$")
+let hairColorValid (token: string): bool = hairColorRegex.IsMatch token
+
+let eyeColorValid (token: string): bool =
+    let validColors =
+        Set.ofList [ "amb"
+                     "blu"
+                     "brn"
+                     "gry"
+                     "grn"
+                     "hzl"
+                     "oth" ]
+
+    validColors.Contains token
+
+let pidRegex = new Regex("^\d{9}$")
+let pidValid (token: string): bool = pidRegex.IsMatch token
+
 let validateField (key: string) (value: string): bool =
     let validator =
         match key with
@@ -63,12 +82,15 @@ let validateField (key: string) (value: string): bool =
         | "iyr" -> yearValid 2010 2020
         | "eyr" -> yearValid 2020 2030
         | "hgt" -> heightValid
+        | "hcl" -> hairColorValid
+        | "ecl" -> eyeColorValid
+        | "pid" -> pidValid
         | _ -> (fun _ -> false)
 
     validator value
 
-let validateFields (record: Record): bool =
-    let required =
+let validateRecord (record: Record): bool =
+    let requiredFields =
         Set.ofList [ "byr"
                      // "cid"  <-- optional
                      "iyr"
@@ -78,11 +100,23 @@ let validateFields (record: Record): bool =
                      "ecl"
                      "pid" ]
 
+    let fields = Map.ofSeq record
 
-    false
+    let valid =
+        requiredFields
+        |> Seq.filter
+            (fun key ->
+                fields.ContainsKey(key)
+                && validateField key (fields.Item(key)))
 
+    Seq.length valid = Seq.length requiredFields
 
-let solve (input: string): (int * int) = part1 input, 0
+let part2 (input: string): int =
+    parseAll input
+    |> Seq.filter validateRecord
+    |> Seq.length
+
+let solve (input: string): (int * int) = part1 input, part2 input
 
 let example = "ecl:gry pid:860033327 eyr:2020 hcl:#fffffd
 byr:1937 iyr:2017 cid:147 hgt:183cm
@@ -129,6 +163,50 @@ let heightValidatorTests =
         (fun (input, expected) ->
             let description = $"height validity: {input} {expected}"
             test description { Expect.equal (heightValid input) expected "" })
+
+// (Hair Color) - a # followed by exactly six characters 0-9 or a-f.
+let hairColorValidatorTests =
+    [ ("#a2cd56", true)
+      ("#01234g", false)
+      ("#a2cd567", false)
+      ("#a", false)
+      ("a", false) ]
+    |> List.map
+        (fun (input, expected) ->
+            let description =
+                $"hair color validity: {input} {expected}"
+
+            test description { Expect.equal (hairColorValid input) expected "" })
+
+// (Eye Color) - exactly one of: amb blu brn gry grn hzl oth
+let eyeColorValidatorTests =
+    [ ("amb", true)
+      ("blu", true)
+      ("brn", true)
+      ("gry", true)
+      ("hzl", true)
+      ("oth", true)
+      ("xxx", false)
+      ("a", false) ]
+    |> List.map
+        (fun (input, expected) ->
+            let description =
+                $"eye color validity: {input} {expected}"
+
+            test description { Expect.equal (eyeColorValid input) expected "" })
+
+// (Passport ID) - a nine-digit number, including leading zeroes
+let pidValidatorTests =
+    [ ("123456789", true)
+      ("003456789", true)
+      ("12345678", false)
+      ("abcdefghi", false) ]
+    |> List.map
+        (fun (input, expected) ->
+            let description =
+                $"passport id validity: {input} {expected}"
+
+            test description { Expect.equal (pidValid input) expected "" })
 
 let tests =
     testList
@@ -188,4 +266,7 @@ let tests =
 
                Expect.equal validCount_Expected validCount_Expected ""
            } ]
-         @ yearValidatorTests @ heightValidatorTests)
+         @ yearValidatorTests
+           @ heightValidatorTests
+             @ hairColorValidatorTests
+               @ eyeColorValidatorTests @ pidValidatorTests)
