@@ -2,7 +2,7 @@
   "profiles": {
     "FSharp": {
       "commandName": "Project",
-      "commandLineArgs": "4"
+      "commandLineArgs": "5"
     }
   }
 }
