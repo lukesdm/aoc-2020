@@ -46,7 +46,8 @@ let main argv =
             Day4.solve (input.TrimEnd()) :> Object
         | "5" ->
             let _ = runTestsWithCLIArgs [] [||] Day5.tests
-            "TODO" :> Object
+            let input = File.ReadAllLines "day5.txt"
+            Day5.solve input :> Object
         | _ ->
             printfn $"Not implemented for day {day}"
             exit 1
