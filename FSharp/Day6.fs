@@ -26,15 +26,12 @@ let parseAnswerGroups (input: string): seq<string []> =
     input.Split("\n\n")
     |> Seq.map (fun s -> s.Split("\n"))
 
-let buildSet (acc: Set<char>) (input: string): Set<char> =
-    input
-    |> Seq.fold (fun set cha -> Set.add cha set) acc
+// ***PART 1***
 
 let calcGroupAnswerCounts (membersAnswers: string []): int =
-    let init: Set<char> = Set.empty
-
     membersAnswers
-    |> Array.fold buildSet init
+    |> Array.map (fun str -> Set.ofArray (str.ToCharArray()))
+    |> Set.unionMany
     |> Set.count
 
 let calcAllAnswerCounts (input: string): seq<int> =
@@ -44,15 +41,13 @@ let calcAllAnswerCounts (input: string): seq<int> =
 
 let part1 input = Seq.sum (calcAllAnswerCounts input)
 
-
 // ***PART 2***
-let calcGroupAnswerCounts2 (membersAnswers: string []): int =
-    let sets =
-        membersAnswers
-        |> Array.map (fun str -> Set.ofArray (str.ToCharArray()))
 
-    let is = sets |> Seq.reduce Set.intersect
-    is.Count
+let calcGroupAnswerCounts2 (membersAnswers: string []): int =
+    membersAnswers
+    |> Array.map (fun str -> Set.ofArray (str.ToCharArray()))
+    |> Set.intersectMany
+    |> Set.count
 
 let calcAllAnswerCounts2 (input: string): seq<int> =
     input
