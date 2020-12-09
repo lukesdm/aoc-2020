@@ -3,7 +3,9 @@ module Day6
 
 open Expecto
 
-/// "In this example, the sum of these counts is 3 + 3 + 3 + 1 + 1 = 11"
+/// Part 1 - "In this example, the sum of these counts is 3 + 3 + 3 + 1 + 1 = 11"
+///
+/// Part 2 - "In this example, the sum of these counts is 3 + 0 + 1 + 1 + 1 = 6"
 let example1 = "abc
 
 a
@@ -42,7 +44,26 @@ let calcAllAnswerCounts (input: string): seq<int> =
 
 let part1 input = Seq.sum (calcAllAnswerCounts input)
 
-let solve input = part1 input
+
+// ***PART 2***
+let calcGroupAnswerCounts2 (membersAnswers: string []): int =
+    let sets =
+        membersAnswers
+        |> Array.map (fun str -> Set.ofArray (str.ToCharArray()))
+
+    let is = sets |> Seq.reduce Set.intersect
+    is.Count
+
+let calcAllAnswerCounts2 (input: string): seq<int> =
+    input
+    |> parseAnswerGroups
+    |> Seq.map calcGroupAnswerCounts2
+
+let part2 (input: string): int = Seq.sum (calcAllAnswerCounts2 input)
+
+// ***...***
+
+let solve (input: string) = (part1 input, part2 input)
 
 let tests =
     testList
@@ -54,7 +75,7 @@ let tests =
             let answerGroupCount_Actual = Seq.length (parseAnswerGroups input)
             Expect.equal answerGroupCount_Actual answerGroupCount_Expected ""
           }
-          test "Example 1 - Get answer counts for groups" {
+          test "Part 1 - Example 1 - Get answer counts for groups" {
               // The form asks a series of 26 yes-or-no questions marked a through z
               // 'identify the questions for which anyone in your group answers "yes"'
               let input = example1.Replace("\r\n", "\n")
@@ -66,11 +87,27 @@ let tests =
 
               Expect.equal (List.ofSeq actual) expected ""
           }
-          test "Example 1 - Calc sum of counts" {
+          test "Part 1 - Example 1 - Calc sum of counts" {
               let input = example1.Replace("\r\n", "\n")
               let expected = 11
 
               let actual = (part1 input)
+
+              Expect.equal actual expected ""
+          }
+          test "Part 2 - Example 1 - Get answer counts for groups" {
+              let input = example1.Replace("\r\n", "\n")
+              let expected = [ 3; 0; 1; 1; 1 ]
+
+              let actual = calcAllAnswerCounts2 input
+
+              Expect.equal (List.ofSeq actual) expected ""
+          }
+          test "Part 2 - Example 1 - Calc sum of counts" {
+              let input = example1.Replace("\r\n", "\n")
+              let expected = 6
+
+              let actual = (part2 input)
 
               Expect.equal actual expected ""
           } ]

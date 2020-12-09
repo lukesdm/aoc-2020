@@ -55,7 +55,7 @@ let main argv =
 
             let input = File.ReadAllText "day6.txt"
 
-            Day6.solve input :> Object
+            Day6.solve (input.TrimEnd()) :> Object
         | _ ->
             printfn $"Not implemented for day {day}"
             exit 1
