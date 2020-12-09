@@ -49,7 +49,18 @@ let part1 (input: string []): int =
     |> Seq.map (fun line -> (findSeat line).Id)
     |> Seq.max
 
-let solve (input: string []): (int * int) = part1 input, 0
+// Find ID missing from list
+let part2 (input: string []): int =
+    let seatsTaken =
+        input
+        |> Seq.map (fun line -> (findSeat line).Id)
+        |> Set.ofSeq
+
+    { Set.minElement seatsTaken .. Set.maxElement seatsTaken }
+    |> Seq.filter (fun id -> not (Set.contains id seatsTaken))
+    |> Seq.head
+
+let solve (input: string []): (int * int) = part1 input, part2 input
 
 let tests =
     testList
