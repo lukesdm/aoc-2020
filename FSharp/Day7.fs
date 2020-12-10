@@ -48,7 +48,19 @@ let parse (input: string): Rule =
     { BagKind = bagKind
       Contains = List.ofSeq contains }
 
-let parseAll (input: string []): seq<Rule> = input |> Seq.map parse
+let parseRules (input: string []): seq<Rule> = input |> Seq.map parse
+
+let createNode (rule: Rule): (NodeId * Parents) =
+    (rule.BagKind,
+     List.map (fun (bagKind, _) -> bagKind) rule.Contains
+     |> Set.ofList)
+
+let buildTree (tree: Tree) (rule: Rule): Tree = tree.Add(createNode rule)
+
+let parseIntoTree (input: string []): Tree =
+    input
+    |> parseRules
+    |> Seq.fold buildTree Map.empty
 
 let example1 = "light red bags contain 1 bright white bag, 2 muted yellow bags.
 dark orange bags contain 3 bright white bags, 4 muted yellow bags.
@@ -120,7 +132,38 @@ let tests =
                     { BagKind = "dotted black"
                       Contains = [] } ]
 
-              let rules_actual = parseAll input
+              let rules_actual = parseRules input
 
               Expect.equal (List.ofSeq rules_actual) rules_expected ""
+          }
+          test "Example 1 - Build tree" {
+              let input =
+                  example1.Replace("\r\n", "\n").Split("\n")
+
+              let expected: Tree =
+                  Map.ofList [ ("light red",
+                                Set.ofList [ "bright white"
+                                             "muted yellow" ])
+                               ("dark orange",
+                                Set.ofList [ "bright white"
+                                             "muted yellow" ])
+                               ("bright white", Set.ofList [ "shiny gold" ])
+                               ("muted yellow",
+                                Set.ofList [ "shiny gold"
+                                             "faded blue" ])
+                               ("shiny gold",
+                                Set.ofList [ "dark olive"
+                                             "vibrant plum" ])
+                               ("dark olive",
+                                Set.ofList [ "faded blue"
+                                             "dotted black" ])
+                               ("vibrant plum",
+                                Set.ofList [ "faded blue"
+                                             "dotted black" ])
+                               ("faded blue", Set.empty)
+                               ("dotted black", Set.empty) ]
+
+              let actual = parseIntoTree input
+
+              Expect.equal actual expected ""
           } ]
