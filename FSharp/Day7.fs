@@ -62,6 +62,12 @@ let parseIntoTree (input: string []): Tree =
     |> parseRules
     |> Seq.fold buildTree Map.empty
 
+let part1 (input: string []): int =
+    getAncestors (parseIntoTree input) "shiny gold" Set.empty
+    |> Set.count
+
+let solve input = part1 input
+
 let example1 = "light red bags contain 1 bright white bag, 2 muted yellow bags.
 dark orange bags contain 3 bright white bags, 4 muted yellow bags.
 bright white bags contain 1 shiny gold bag.
@@ -166,4 +172,17 @@ let tests =
               let actual = parseIntoTree input
 
               Expect.equal actual expected ""
+          }
+          test "Example 1 - Solve bag ancestors" {
+              let inputTree =
+                  example1.Replace("\r\n", "\n").Split("\n")
+                  |> parseIntoTree
+
+              // "in this example, the number of bag colors that can eventually contain at least one shiny gold bag is 4"
+              let bagKinds_expected = 4
+
+              let bagKinds_actual =
+                  getAncestors inputTree "shiny gold" Set.empty
+
+              Expect.equal bagKinds_actual.Count bagKinds_expected ""
           } ]
