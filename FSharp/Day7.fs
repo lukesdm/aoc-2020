@@ -50,12 +50,22 @@ let parse (input: string): Rule =
 
 let parseRules (input: string []): seq<Rule> = input |> Seq.map parse
 
-let createNode (rule: Rule): (NodeId * Parents) =
-    (rule.BagKind,
-     List.map (fun (bagKind, _) -> bagKind) rule.Contains
-     |> Set.ofList)
+let getParents (tree: Tree) (node: NodeId): Parents =
+    match tree.TryFind node with
+    | Some (parents) -> parents
+    | None -> Set.empty
 
-let buildTree (tree: Tree) (rule: Rule): Tree = tree.Add(createNode rule)
+let addParent (tree: Tree) (node: NodeId) (parent: NodeId): Tree =
+    let parents = (getParents tree node).Add(parent)
+    tree.Add(node, parents)
+
+/// Builds tree from given rules, storing nodes and their parents in a hashmap, referenced by bag colour
+let buildTree (tree: Tree) (rule: Rule): Tree =
+    let tree =
+        if tree.ContainsKey(rule.BagKind) then tree else tree.Add(rule.BagKind, Set.empty)
+
+    rule.Contains
+    |> Seq.fold (fun acc (node, _) -> addParent acc node rule.BagKind) tree
 
 let parseIntoTree (input: string []): Tree =
     input
@@ -147,27 +157,26 @@ let tests =
                   example1.Replace("\r\n", "\n").Split("\n")
 
               let expected: Tree =
-                  Map.ofList [ ("light red",
-                                Set.ofList [ "bright white"
-                                             "muted yellow" ])
-                               ("dark orange",
-                                Set.ofList [ "bright white"
-                                             "muted yellow" ])
-                               ("bright white", Set.ofList [ "shiny gold" ])
-                               ("muted yellow",
-                                Set.ofList [ "shiny gold"
-                                             "faded blue" ])
-                               ("shiny gold",
+                  Map.ofList [ ("bright white",
+                                Set.ofList [ "dark orange"
+                                             "light red" ])
+                               ("dark olive", Set.ofList [ "shiny gold" ])
+                               ("dark orange", Set.empty)
+                               ("dotted black",
                                 Set.ofList [ "dark olive"
                                              "vibrant plum" ])
-                               ("dark olive",
-                                Set.ofList [ "faded blue"
-                                             "dotted black" ])
-                               ("vibrant plum",
-                                Set.ofList [ "faded blue"
-                                             "dotted black" ])
-                               ("faded blue", Set.empty)
-                               ("dotted black", Set.empty) ]
+                               ("faded blue",
+                                Set.ofList [ "dark olive"
+                                             "vibrant plum"
+                                             "muted yellow" ])
+                               ("light red", Set.empty)
+                               ("muted yellow",
+                                Set.ofList [ "dark orange"
+                                             "light red" ])
+                               ("shiny gold",
+                                Set.ofList [ "bright white"
+                                             "muted yellow" ])
+                               ("vibrant plum", Set.ofList [ "shiny gold" ]) ]
 
               let actual = parseIntoTree input
 
