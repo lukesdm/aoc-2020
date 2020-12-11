@@ -76,7 +76,31 @@ let part1 (input: string []): int =
     getAncestors (parseIntoTree input) "shiny gold" Set.empty
     |> Set.count
 
-let solve input = part1 input
+/// ***PART 2***
+
+let createNode2 (rule: Rule): (NodeId * Parents) =
+    (rule.BagKind,
+     List.map (fun (bagKind, _) -> bagKind) rule.Contains
+     |> Set.ofList)
+
+let buildTree2 (tree: Tree) (rule: Rule): Tree = tree.Add(createNode2 rule)
+
+let parseIntoTree2 (input: string []): Tree =
+    input
+    |> parseRules
+    |> Seq.fold buildTree2 Map.empty
+
+
+// This works as it's the same algorith, just with different semantics
+let getChildren = getAncestors
+
+let part2 (input: string []): int =
+    getChildren (parseIntoTree2 input) "shiny gold" Set.empty
+    |> Set.count // TODO: should sum bagcounts
+
+// ***...***
+
+let solve input = (part1 input, part2 input)
 
 let example1 = "light red bags contain 1 bright white bag, 2 muted yellow bags.
 dark orange bags contain 3 bright white bags, 4 muted yellow bags.
@@ -152,7 +176,7 @@ let tests =
 
               Expect.equal (List.ofSeq rules_actual) rules_expected ""
           }
-          test "Example 1 - Build tree" {
+          test "Part 1 - Example 1 - Build tree" {
               let input =
                   example1.Replace("\r\n", "\n").Split("\n")
 
@@ -182,7 +206,7 @@ let tests =
 
               Expect.equal actual expected ""
           }
-          test "Example 1 - Solve bag ancestors" {
+          test "Part 1 - Example 1 - Solve bag ancestors" {
               let inputTree =
                   example1.Replace("\r\n", "\n").Split("\n")
                   |> parseIntoTree
@@ -194,4 +218,35 @@ let tests =
                   getAncestors inputTree "shiny gold" Set.empty
 
               Expect.equal bagKinds_actual.Count bagKinds_expected ""
+          }
+          test "Part 2 - Example 1 - Build Tree" {
+              let input =
+                  example1.Replace("\r\n", "\n").Split("\n")
+
+              let expected: Tree =
+                  Map.ofList [ ("light red",
+                                Set.ofList [ "bright white"
+                                             "muted yellow" ])
+                               ("dark orange",
+                                Set.ofList [ "bright white"
+                                             "muted yellow" ])
+                               ("bright white", Set.ofList [ "shiny gold" ])
+                               ("muted yellow",
+                                Set.ofList [ "shiny gold"
+                                             "faded blue" ])
+                               ("shiny gold",
+                                Set.ofList [ "dark olive"
+                                             "vibrant plum" ])
+                               ("dark olive",
+                                Set.ofList [ "faded blue"
+                                             "dotted black" ])
+                               ("vibrant plum",
+                                Set.ofList [ "faded blue"
+                                             "dotted black" ])
+                               ("faded blue", Set.empty)
+                               ("dotted black", Set.empty) ]
+
+              let actual = parseIntoTree2 input
+
+              Expect.equal actual expected ""
           } ]
