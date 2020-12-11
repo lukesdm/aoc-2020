@@ -78,25 +78,33 @@ let part1 (input: string []): int =
 
 /// ***PART 2***
 
-let createNode2 (rule: Rule): (NodeId * Parents) =
-    (rule.BagKind,
-     List.map (fun (bagKind, _) -> bagKind) rule.Contains
-     |> Set.ofList)
+// NodeId and bag count
+type Nodes2 = Set<NodeId * int>
+type Children = Nodes2
+type Tree2 = Map<NodeId, Children>
 
-let buildTree2 (tree: Tree) (rule: Rule): Tree = tree.Add(createNode2 rule)
+let createNode2 (rule: Rule): (NodeId * Children) =
+    (rule.BagKind, Set.ofList rule.Contains)
 
-let parseIntoTree2 (input: string []): Tree =
+let buildTree2 (tree: Tree2) (rule: Rule): Tree2 = tree.Add(createNode2 rule)
+
+let parseIntoTree2 (input: string []): Tree2 =
     input
     |> parseRules
     |> Seq.fold buildTree2 Map.empty
 
+let rec getChildren (tree: Tree2) (node: NodeId) (acc: Nodes2): Nodes2 =
+    let children = tree.Item(node)
 
-// This works as it's the same algorith, just with different semantics
-let getChildren = getAncestors
+    if children.IsEmpty then
+        acc
+    else
+        children
+        |> Seq.fold (fun acc (n, _) -> getChildren tree n (Set.union acc children)) acc
 
 let part2 (input: string []): int =
     getChildren (parseIntoTree2 input) "shiny gold" Set.empty
-    |> Set.count // TODO: should sum bagcounts
+    |> Seq.sumBy (fun (_, count) -> count) // Nope. TODO: fix - need to multiply and sum instead.
 
 // ***...***
 
@@ -223,30 +231,37 @@ let tests =
               let input =
                   example1.Replace("\r\n", "\n").Split("\n")
 
-              let expected: Tree =
+              let expected: Tree2 =
                   Map.ofList [ ("light red",
-                                Set.ofList [ "bright white"
-                                             "muted yellow" ])
+                                Set.ofList [ ("bright white", 1)
+                                             ("muted yellow", 2) ])
                                ("dark orange",
-                                Set.ofList [ "bright white"
-                                             "muted yellow" ])
-                               ("bright white", Set.ofList [ "shiny gold" ])
+                                Set.ofList [ ("bright white", 3)
+                                             ("muted yellow", 4) ])
+                               ("bright white", Set.ofList [ ("shiny gold", 1) ])
                                ("muted yellow",
-                                Set.ofList [ "shiny gold"
-                                             "faded blue" ])
+                                Set.ofList [ ("shiny gold", 2)
+                                             ("faded blue", 9) ])
                                ("shiny gold",
-                                Set.ofList [ "dark olive"
-                                             "vibrant plum" ])
+                                Set.ofList [ ("dark olive", 1)
+                                             ("vibrant plum", 2) ])
                                ("dark olive",
-                                Set.ofList [ "faded blue"
-                                             "dotted black" ])
+                                Set.ofList [ ("faded blue", 3)
+                                             ("dotted black", 4) ])
                                ("vibrant plum",
-                                Set.ofList [ "faded blue"
-                                             "dotted black" ])
+                                Set.ofList [ ("faded blue", 5)
+                                             ("dotted black", 6) ])
                                ("faded blue", Set.empty)
                                ("dotted black", Set.empty) ]
 
               let actual = parseIntoTree2 input
 
               Expect.equal actual expected ""
+          }
+          test "Part 2 - Example 1 - Total bags" {
+              let input =
+                  example1.Replace("\r\n", "\n").Split("\n")
+              // So, a single shiny gold bag must contain 1 dark olive bag (and the 7 bags within it)
+              // plus 2 vibrant plum bags (and the 11 bags within each of those): 1 + 1*7 + 2 + 2*11 = 32 bags
+              Expect.equal (part2 input) 32 ""
           } ]
