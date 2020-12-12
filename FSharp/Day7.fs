@@ -102,9 +102,18 @@ let rec getChildren (tree: Tree2) (node: NodeId) (acc: Nodes2): Nodes2 =
         children
         |> Seq.fold (fun acc (n, _) -> getChildren tree n (Set.union acc children)) acc
 
+let rec countDescendants (tree: Tree2) (node: NodeId): int =
+    let children = tree.Item(node)
+
+    if children.IsEmpty then
+        0
+    else
+        (children
+         |> Seq.map (fun (child_id, child_count) -> child_count * (1 + countDescendants tree child_id))
+         |> Seq.sum)
+
 let part2 (input: string []): int =
-    getChildren (parseIntoTree2 input) "shiny gold" Set.empty
-    |> Seq.sumBy (fun (_, count) -> count) // Nope. TODO: fix - need to multiply and sum instead.
+    countDescendants (parseIntoTree2 input) "shiny gold"
 
 // ***...***
 
