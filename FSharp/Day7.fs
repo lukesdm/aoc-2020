@@ -6,7 +6,7 @@ open System.Text.RegularExpressions
 type NodeId = string
 type Nodes = Set<NodeId>
 type Parents = Nodes
-type Tree = Map<NodeId, Parents>
+type Dag = Map<NodeId, Parents>
 
 type BagKind = string
 type BagCount = BagKind * int
@@ -15,14 +15,14 @@ type Rule =
     { BagKind: BagKind
       Contains: list<BagCount> }
 
-let rec getAncestors (tree: Tree) (node: NodeId) (acc: Nodes): Nodes =
-    let parents = tree.Item(node)
+let rec getAncestors (dag: Dag) (node: NodeId) (acc: Nodes): Nodes =
+    let parents = dag.Item(node)
 
     if parents.IsEmpty then
         acc
     else
         parents
-        |> Seq.fold (fun acc n -> getAncestors tree n (Set.union acc parents)) acc
+        |> Seq.fold (fun acc n -> getAncestors dag n (Set.union acc parents)) acc
 
 /// Given "striped maroon bags contain 4 vibrant tomato bags, 2 dull salmon bags, 1 shiny gold bag, 2 muted coral bags."
 /// Matches will be 0:"striped maroon" 1:"4 vibrant tomato" 2:"2 dull salmon" 3:"1 shiny gold" 4:"2 muted coral"
@@ -50,30 +50,28 @@ let parse (input: string): Rule =
 
 let parseRules (input: string []): seq<Rule> = input |> Seq.map parse
 
-let getParents (tree: Tree) (node: NodeId): Parents =
-    match tree.TryFind node with
+let getParents (dag: Dag) (node: NodeId): Parents =
+    match dag.TryFind node with
     | Some (parents) -> parents
     | None -> Set.empty
 
-let addParent (tree: Tree) (node: NodeId) (parent: NodeId): Tree =
-    let parents = (getParents tree node).Add(parent)
-    tree.Add(node, parents)
+let addParent (dag: Dag) (node: NodeId) (parent: NodeId): Dag =
+    let parents = (getParents dag node).Add(parent)
+    dag.Add(node, parents)
 
-/// Builds tree from given rules, storing nodes and their parents in a hashmap, referenced by bag colour
-let buildTree (tree: Tree) (rule: Rule): Tree =
-    let tree =
-        if tree.ContainsKey(rule.BagKind) then tree else tree.Add(rule.BagKind, Set.empty)
+/// Builds dag from given rules, storing nodes and their parents in a hashmap, referenced by bag colour
+let buildDag (dag: Dag) (rule: Rule): Dag =
+    let dag =
+        if dag.ContainsKey(rule.BagKind) then dag else dag.Add(rule.BagKind, Set.empty)
 
     rule.Contains
-    |> Seq.fold (fun acc (node, _) -> addParent acc node rule.BagKind) tree
+    |> Seq.fold (fun acc (node, _) -> addParent acc node rule.BagKind) dag
 
-let parseIntoTree (input: string []): Tree =
-    input
-    |> parseRules
-    |> Seq.fold buildTree Map.empty
+let parseIntoDag (input: string []): Dag =
+    input |> parseRules |> Seq.fold buildDag Map.empty
 
 let part1 (input: string []): int =
-    getAncestors (parseIntoTree input) "shiny gold" Set.empty
+    getAncestors (parseIntoDag input) "shiny gold" Set.empty
     |> Set.count
 
 /// ***PART 2***
@@ -81,39 +79,39 @@ let part1 (input: string []): int =
 // NodeId and bag count
 type Nodes2 = Set<NodeId * int>
 type Children = Nodes2
-type Tree2 = Map<NodeId, Children>
+type Dag2 = Map<NodeId, Children>
 
 let createNode2 (rule: Rule): (NodeId * Children) =
     (rule.BagKind, Set.ofList rule.Contains)
 
-let buildTree2 (tree: Tree2) (rule: Rule): Tree2 = tree.Add(createNode2 rule)
+let buildDag2 (dag: Dag2) (rule: Rule): Dag2 = dag.Add(createNode2 rule)
 
-let parseIntoTree2 (input: string []): Tree2 =
+let parseIntoDag2 (input: string []): Dag2 =
     input
     |> parseRules
-    |> Seq.fold buildTree2 Map.empty
+    |> Seq.fold buildDag2 Map.empty
 
-let rec getChildren (tree: Tree2) (node: NodeId) (acc: Nodes2): Nodes2 =
-    let children = tree.Item(node)
+let rec getChildren (dag: Dag2) (node: NodeId) (acc: Nodes2): Nodes2 =
+    let children = dag.Item(node)
 
     if children.IsEmpty then
         acc
     else
         children
-        |> Seq.fold (fun acc (n, _) -> getChildren tree n (Set.union acc children)) acc
+        |> Seq.fold (fun acc (n, _) -> getChildren dag n (Set.union acc children)) acc
 
-let rec countDescendants (tree: Tree2) (node: NodeId): int =
-    let children = tree.Item(node)
+let rec countDescendants (dag: Dag2) (node: NodeId): int =
+    let children = dag.Item(node)
 
     if children.IsEmpty then
         0
     else
         (children
-         |> Seq.map (fun (child_id, child_count) -> child_count * (1 + countDescendants tree child_id))
+         |> Seq.map (fun (child_id, child_count) -> child_count * (1 + countDescendants dag child_id))
          |> Seq.sum)
 
 let part2 (input: string []): int =
-    countDescendants (parseIntoTree2 input) "shiny gold"
+    countDescendants (parseIntoDag2 input) "shiny gold"
 
 // ***...***
 
@@ -133,7 +131,7 @@ let tests =
     testList
         "Day 7"
         [ test "Get ancestors" {
-            let tree: Tree =
+            let dag: Dag =
                 Map.ofList [ ("A", Set.empty)
                              ("B", Set.empty)
                              ("C", Set.empty)
@@ -151,7 +149,7 @@ let tests =
                              "C" ]
 
 
-            let ancestors_actual = getAncestors tree "G" Set.empty
+            let ancestors_actual = getAncestors dag "G" Set.empty
 
             Expect.equal ancestors_actual ancestors_expected ""
           }
@@ -193,11 +191,11 @@ let tests =
 
               Expect.equal (List.ofSeq rules_actual) rules_expected ""
           }
-          test "Part 1 - Example 1 - Build tree" {
+          test "Part 1 - Example 1 - Build DAG from rules" {
               let input =
                   example1.Replace("\r\n", "\n").Split("\n")
 
-              let expected: Tree =
+              let expected: Dag =
                   Map.ofList [ ("bright white",
                                 Set.ofList [ "dark orange"
                                              "light red" ])
@@ -219,28 +217,28 @@ let tests =
                                              "muted yellow" ])
                                ("vibrant plum", Set.ofList [ "shiny gold" ]) ]
 
-              let actual = parseIntoTree input
+              let actual = parseIntoDag input
 
               Expect.equal actual expected ""
           }
-          test "Part 1 - Example 1 - Solve bag ancestors" {
-              let inputTree =
+          test "Part 1 - Example 1 - Count bag ancestors" {
+              let inputDag =
                   example1.Replace("\r\n", "\n").Split("\n")
-                  |> parseIntoTree
+                  |> parseIntoDag
 
               // "in this example, the number of bag colors that can eventually contain at least one shiny gold bag is 4"
               let bagKinds_expected = 4
 
               let bagKinds_actual =
-                  getAncestors inputTree "shiny gold" Set.empty
+                  getAncestors inputDag "shiny gold" Set.empty
 
               Expect.equal bagKinds_actual.Count bagKinds_expected ""
           }
-          test "Part 2 - Example 1 - Build Tree" {
+          test "Part 2 - Example 1 - Build DAG" {
               let input =
                   example1.Replace("\r\n", "\n").Split("\n")
 
-              let expected: Tree2 =
+              let expected: Dag2 =
                   Map.ofList [ ("light red",
                                 Set.ofList [ ("bright white", 1)
                                              ("muted yellow", 2) ])
@@ -263,11 +261,11 @@ let tests =
                                ("faded blue", Set.empty)
                                ("dotted black", Set.empty) ]
 
-              let actual = parseIntoTree2 input
+              let actual = parseIntoDag2 input
 
               Expect.equal actual expected ""
           }
-          test "Part 2 - Example 1 - Total bags" {
+          test "Part 2 - Example 1 - Total contained bags" {
               let input =
                   example1.Replace("\r\n", "\n").Split("\n")
               // So, a single shiny gold bag must contain 1 dark olive bag (and the 7 bags within it)
