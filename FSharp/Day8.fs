@@ -1,4 +1,5 @@
-﻿module Day8
+﻿// https://adventofcode.com/2020/day/8
+module Day8
 
 open Expecto
 
@@ -17,8 +18,15 @@ let run (instructions: Instruction []): State =
         { InstructionPointer = 0
           Accumulator = 0 }
 
-    while state.InstructionPointer < instructions.Length do
+    let runCounts = Array.zeroCreate instructions.Length
+
+    let isInfLoop (): bool =
+        runCounts.[state.InstructionPointer] > 0
+
+    while (state.InstructionPointer < instructions.Length)
+          && not (isInfLoop ()) do
         let instruction = instructions.[state.InstructionPointer]
+        runCounts.[state.InstructionPointer] <- runCounts.[state.InstructionPointer] + 1
 
         match instruction with
         | Nop -> state.InstructionPointer <- state.InstructionPointer + 1
@@ -32,15 +40,23 @@ let run (instructions: Instruction []): State =
 let parseLine (line: string): Instruction =
     let instructionToken = line.[0..2]
     let argumentToken = line.[4..]
+
     match instructionToken with
     | "nop" -> Nop
-    | "jmp" -> Jmp (int argumentToken)
-    | "acc" -> Acc (int argumentToken)
+    | "jmp" -> Jmp(int argumentToken)
+    | "acc" -> Acc(int argumentToken)
     | _ -> failwith "Unexpected input"
-    
-let parse (input: string) : Instruction[] =
-    input.Replace("\r\n", "\n").Split('\n') |> Array.map parseLine
-    
+
+let parse (input: string): Instruction [] =
+    input.Replace("\r\n", "\n").Split('\n')
+    |> Array.map parseLine
+
+let part1 (input: string): int =
+    let finalState = input |> parse |> run
+    finalState.Accumulator
+
+let solve input = part1 input
+
 let example1 = "nop +0
 acc +1
 jmp +4
@@ -90,4 +106,14 @@ let tests =
               let actual = parse example1
 
               Expect.equal actual expected ""
+          }
+          test "Example 1 - Break before infinite loop" {
+              // "Immediately before the program would run an instruction a second time, the value in the accumulator is 5."
+              let acc_expected = 5
+              let instructions = parse example1
+
+              let state = run instructions
+              let acc_actual = state.Accumulator
+
+              Expect.equal acc_actual acc_expected ""
           } ]
