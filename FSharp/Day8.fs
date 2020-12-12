@@ -8,34 +8,56 @@ type Instruction =
     | Jmp of int
     | Acc of int
 
+type Status =
+    | Running
+    | InfiniteLoop
+    | Finished
+
 type State =
     { mutable InstructionPointer: int
-      mutable Accumulator: int }
+      mutable Accumulator: int
+      mutable Status: Status }
+
+/// Collection of indices of instructions to flip that might fix the infinite loop
+type Candidates = list<int>
 
 /// Runs the given instructions, returning the final state
-let run (instructions: Instruction []): State =
-    let state =
-        { InstructionPointer = 0
-          Accumulator = 0 }
+//let run (instructions: Instruction []) (candidates: Candidates): (State * Candidates) =
 
-    let runCounts = Array.zeroCreate instructions.Length
+//    // Flag for whether this is the first run, in which the list of candidates for patching are built
+//    let buildCandidates = List.isEmpty candidates
 
-    let isInfLoop (): bool =
-        runCounts.[state.InstructionPointer] > 0
-
-    while (state.InstructionPointer < instructions.Length)
-          && not (isInfLoop ()) do
+let rec run (instructions: Instruction []) (state: State) (runCounts: int []) =
+    if state.InstructionPointer > instructions.Length - 1 then
+        { state with Status = Finished }
+    else if runCounts.[state.InstructionPointer] > 0 then
+        { state with Status = InfiniteLoop }
+    else
         let instruction = instructions.[state.InstructionPointer]
         runCounts.[state.InstructionPointer] <- runCounts.[state.InstructionPointer] + 1
 
-        match instruction with
-        | Nop -> state.InstructionPointer <- state.InstructionPointer + 1
-        | Jmp n -> state.InstructionPointer <- state.InstructionPointer + n
-        | Acc n ->
-            state.Accumulator <- state.Accumulator + n
-            state.InstructionPointer <- state.InstructionPointer + 1
+        let newState =
+            match instruction with
+            | Nop ->
+                { state with
+                      InstructionPointer = state.InstructionPointer + 1 }
+            | Jmp n ->
+                { state with
+                      InstructionPointer = state.InstructionPointer + n }
+            | Acc n ->
+                { state with
+                      Accumulator = state.Accumulator + n
+                      InstructionPointer = state.InstructionPointer + 1 }
 
-    state
+        run instructions newState runCounts
+
+let run0 (instructions: Instruction []): State =
+    run
+        instructions
+        { InstructionPointer = 0
+          Accumulator = 0
+          Status = Running }
+        (Array.zeroCreate instructions.Length)
 
 let parseLine (line: string): Instruction =
     let instructionToken = line.[0..2]
@@ -52,7 +74,7 @@ let parse (input: string): Instruction [] =
     |> Array.map parseLine
 
 let part1 (input: string): int =
-    let finalState = input |> parse |> run
+    let finalState = input |> parse |> run0
     finalState.Accumulator
 
 let solve input = part1 input
@@ -73,21 +95,21 @@ let tests =
         [ test "nop" {
             let instructions = [| Nop |]
 
-            let state = run instructions
+            let state = run0 instructions
 
             Expect.equal state.InstructionPointer 1 ""
           }
           test "jmp" {
               let instructions = [| Jmp 4 |]
 
-              let state = run instructions
+              let state = run0 instructions
 
               Expect.equal state.InstructionPointer 4 ""
           }
           test "acc" {
               let instructions = [| Acc 2; Acc 7 |]
 
-              let state = run instructions
+              let state = run0 instructions
 
               Expect.equal state.Accumulator 9 ""
           }
@@ -112,7 +134,7 @@ let tests =
               let acc_expected = 5
               let instructions = parse example1
 
-              let state = run instructions
+              let state = run0 instructions
               let acc_actual = state.Accumulator
 
               Expect.equal acc_actual acc_expected ""
