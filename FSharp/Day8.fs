@@ -27,15 +27,17 @@ let flip (instruction: Instruction): Instruction =
     | Jmp n -> Nop n
     | _ -> failwith "Unexpected instruction"
 
-let rec run (instructions: Instruction []) (state: State) (runCounts: int []) (candidates: Candidates): State =
-
-    // Flag for whether to build candidates for patching, which should happen during the first iteration.
-    let buildCandidates = List.isEmpty candidates
+let rec run (instructions: Instruction [])
+            (state: State)
+            (runCounts: int [])
+            (buildCandidates: bool)
+            (candidates: Candidates)
+            : State * Candidates =
 
     if state.InstructionPointer > instructions.Length - 1 then
-        { state with Status = Finished }
+        { state with Status = Finished }, candidates
     else if runCounts.[state.InstructionPointer] > 0 then
-        { state with Status = InfiniteLoop }
+        { state with Status = InfiniteLoop }, candidates
     else
         let (instruction, patched) =
             if List.tryHead candidates = Some state.InstructionPointer
@@ -64,16 +66,51 @@ let rec run (instructions: Instruction []) (state: State) (runCounts: int []) (c
                 candidates
 
         let newState, newCandidates = result
-        run instructions newState runCounts newCandidates
+        run instructions newState runCounts buildCandidates newCandidates
 
 let run0 (instructions: Instruction []): State =
-    run
-        instructions
-        { InstructionPointer = 0
-          Accumulator = 0
-          Status = Running }
-        (Array.zeroCreate instructions.Length)
-        []
+    let state, _ =
+        run
+            instructions
+            { InstructionPointer = 0
+              Accumulator = 0
+              Status = Running }
+            (Array.zeroCreate instructions.Length)
+            true
+            []
+
+    state
+
+let rec trial (state: State) (instructions: Instruction []) (candidates: Candidates): State =
+    if state.Status = Finished then
+        state
+    else
+        let newState, newCandidates =
+            run
+                instructions
+                { InstructionPointer = 0
+                  Accumulator = 0
+                  Status = Running }
+                (Array.zeroCreate instructions.Length)
+                false
+                candidates
+
+        trial newState instructions newCandidates
+
+
+let run2 (instructions: Instruction []): State =
+    let state, candidates =
+        run
+            instructions
+            { InstructionPointer = 0
+              Accumulator = 0
+              Status = Running }
+            (Array.zeroCreate instructions.Length)
+            true
+            []
+
+    trial state instructions candidates
+
 
 let parseLine (line: string): Instruction =
     let instructionToken = line.[0..2]
@@ -93,7 +130,11 @@ let part1 (input: string): int =
     let finalState = input |> parse |> run0
     finalState.Accumulator
 
-let solve input = part1 input
+let part2 (input: string): int =
+    let finalState = input |> parse |> run2
+    finalState.Accumulator
+
+let solve input = part1 input, part2 input
 
 let example1 = "nop +0
 acc +1
@@ -158,7 +199,7 @@ let tests =
           test "Part 2 - Example 1 - Can patch program successfully" {
               let instructions = parse example1
 
-              let state = run0 instructions
+              let state = run2 instructions
 
               Expect.equal state.Status Finished ""
           } ]
