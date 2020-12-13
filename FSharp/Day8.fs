@@ -4,7 +4,7 @@ module Day8
 open Expecto
 
 type Instruction =
-    | Nop
+    | Nop of int
     | Jmp of int
     | Acc of int
 
@@ -21,35 +21,50 @@ type State =
 /// Collection of indices of instructions to flip that might fix the infinite loop
 type Candidates = list<int>
 
-/// Runs the given instructions, returning the final state
-//let run (instructions: Instruction []) (candidates: Candidates): (State * Candidates) =
+let flip (instruction: Instruction): Instruction =
+    match instruction with
+    | Nop n -> Jmp n
+    | Jmp n -> Nop n
+    | _ -> failwith "Unexpected instruction"
 
-//    // Flag for whether this is the first run, in which the list of candidates for patching are built
-//    let buildCandidates = List.isEmpty candidates
+let rec run (instructions: Instruction []) (state: State) (runCounts: int []) (candidates: Candidates): State =
 
-let rec run (instructions: Instruction []) (state: State) (runCounts: int []) =
+    // Flag for whether to build candidates for patching, which should happen during the first iteration.
+    let buildCandidates = List.isEmpty candidates
+
     if state.InstructionPointer > instructions.Length - 1 then
         { state with Status = Finished }
     else if runCounts.[state.InstructionPointer] > 0 then
         { state with Status = InfiniteLoop }
     else
-        let instruction = instructions.[state.InstructionPointer]
+        let (instruction, patched) =
+            if List.tryHead candidates = Some state.InstructionPointer
+            then (flip instructions.[state.InstructionPointer], true)
+            else (instructions.[state.InstructionPointer], false)
         runCounts.[state.InstructionPointer] <- runCounts.[state.InstructionPointer] + 1
 
-        let newState =
+        let result =
             match instruction with
-            | Nop ->
+            | Nop _ ->
                 { state with
-                      InstructionPointer = state.InstructionPointer + 1 }
+                      InstructionPointer = state.InstructionPointer + 1 },
+                (if buildCandidates
+                 then state.InstructionPointer :: candidates
+                 else (if patched then candidates.Tail else candidates))
             | Jmp n ->
                 { state with
-                      InstructionPointer = state.InstructionPointer + n }
+                      InstructionPointer = state.InstructionPointer + n },
+                (if buildCandidates
+                 then state.InstructionPointer :: candidates
+                 else (if patched then candidates.Tail else candidates))
             | Acc n ->
                 { state with
                       Accumulator = state.Accumulator + n
-                      InstructionPointer = state.InstructionPointer + 1 }
+                      InstructionPointer = state.InstructionPointer + 1 },
+                candidates
 
-        run instructions newState runCounts
+        let newState, newCandidates = result
+        run instructions newState runCounts newCandidates
 
 let run0 (instructions: Instruction []): State =
     run
@@ -58,13 +73,14 @@ let run0 (instructions: Instruction []): State =
           Accumulator = 0
           Status = Running }
         (Array.zeroCreate instructions.Length)
+        []
 
 let parseLine (line: string): Instruction =
     let instructionToken = line.[0..2]
     let argumentToken = line.[4..]
 
     match instructionToken with
-    | "nop" -> Nop
+    | "nop" -> Nop(int argumentToken)
     | "jmp" -> Jmp(int argumentToken)
     | "acc" -> Acc(int argumentToken)
     | _ -> failwith "Unexpected input"
@@ -93,7 +109,7 @@ let tests =
     testList
         "Day 8"
         [ test "nop" {
-            let instructions = [| Nop |]
+            let instructions = [| Nop 0 |]
 
             let state = run0 instructions
 
@@ -115,7 +131,7 @@ let tests =
           }
           test "Example 1 - Parse" {
               let expected =
-                  [| Nop
+                  [| Nop 0
                      Acc 1
                      Jmp 4
                      Acc 3
@@ -138,4 +154,11 @@ let tests =
               let acc_actual = state.Accumulator
 
               Expect.equal acc_actual acc_expected ""
+          }
+          test "Part 2 - Example 1 - Can patch program successfully" {
+              let instructions = parse example1
+
+              let state = run0 instructions
+
+              Expect.equal state.Status Finished ""
           } ]
