@@ -103,7 +103,7 @@ let tests =
 
               let result = parse input
 
-              printfn "%A" result
+              //printfn "%A" result
 
               Expect.isTrue true ""
           }
@@ -115,4 +115,57 @@ let tests =
               let actual = part1 input
 
               Expect.equal actual expected ""
+          }
+          test "Part 2 - WIP" {
+              //let mask = "110000011XX0000X101000X10X01XX001011"
+              //let addr0 = 6L
+              let addr0 = 0L
+              let mask = "X00X"
+              //let mask ="X01X"
+
+              let xPositions = mask |> Seq.rev |> Seq.indexed |> Seq.choose (fun (pos, c) -> if c = 'X' then Some(pos) else None) |> Array.ofSeq
+
+              //let addr0 = 49397L
+
+              // "If the bitmask bit is 0, the corresponding memory address bit is unchanged.
+              // If the bitmask bit is 1, the corresponding memory address bit is overwritten with 1."
+              let addr1 = addr0 ||| System.Convert.ToInt64 (mask.Replace ('X', '0'), 2)
+              
+              //// TODO: switch-out powns with shifts
+              let xCount = xPositions.Length
+              //let s = seq {
+              //      for i in 0L..pown 2L (xCount - 1) do
+              //          for xPos in xPositions do
+              //              let xMask = pown 2L xPos
+              //              yield (i <<< xPos) ||| xMask &&& addr1
+              //    }
+
+              //let mutable addr = addr1
+              //let addresses = seq {
+              //    for i in 0L..2L<<<(xCount - 1) do
+              //      // TODO: Replace with reduce on xPositions
+              //      let mutable xMask = 0L
+              //      for xPos in xPositions do
+              //          xMask <- (i <<< xPos) ||| xMask
+              //      yield addr1 ||| xMask
+              //  }
+
+              let addresses = seq {
+                for i in 0L..2L<<<(xCount - 1) do
+                    // TODO: Replace with reduce on xPositions
+                    let mutable xMask = 0L
+                    let mutable n = 0
+                    for xPos in xPositions do
+                        //printfn $"nth bit of {i} is {i>>>n}"
+                        //xMask <- ((i>>>n) <<< (xPos)) ||| xMask
+                        //xMask <- ((i <<< (xPos)) &&& (1L <<< xPos)) ||| xMask
+                        xMask <- ((i &&& (1L <<< n) >>> n ) <<< xPos) ||| xMask
+                        n <- n + 1
+                        //xMask <- (i <<< xPos) ||| xMask
+                    yield addr1 ||| xMask
+                  }
+
+              printfn "%A" addresses
+              
+              Expect.isTrue true ""
           } ]
