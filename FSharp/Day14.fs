@@ -116,14 +116,43 @@ let tests =
 
               Expect.equal actual expected ""
           }
+          
+          /// Builds the 'X' address mask values for the given counter value i
+          let rec xVals maskAcc n i (xPositions: int[]) =
+            if n < 0 then
+                maskAcc
+            else
+                // Calculate nth bit of the counter value i, shift it to the new position, and merge with the rest
+                let nthBit = (i &&& (1L <<< n) >>> n )
+                let next = nthBit <<< xPositions.[n] ||| maskAcc
+                xVals next (n - 1) i xPositions
+          
           test "Part 2 - WIP" {
               //let mask = "110000011XX0000X101000X10X01XX001011"
               //let addr0 = 6L
-              let addr0 = 0L
-              let mask = "X00X"
+              let addr0 = 42L
+              //          000000000000000000000000000000101010
+              let mask = "000000000000000000000000000000X1001X"
+              //          000000000000000000000000000000100001
+              let xMask = mask |> String.map (fun c -> if c = 'X' then '1' else '0')
+              let xMask = System.Convert.ToInt64(xMask, 2)
               //let mask ="X01X"
+              //let addr0 = 0L
+              //let mask = "X00X"
 
               let xPositions = mask |> Seq.rev |> Seq.indexed |> Seq.choose (fun (pos, c) -> if c = 'X' then Some(pos) else None) |> Array.ofSeq
+
+              let xCount = xPositions.Length
+              
+              //let newBits = seq {0L .. 2L <<< xPositions.Length - 1} |> Seq.map (fun i -> System.Convert.ToString(i, 2).PadLeft(xCount, '0')) |> Array.ofSeq
+
+              //let eg = Seq.head newBits
+              
+                
+
+
+                
+                
 
               //let addr0 = 49397L
 
@@ -132,7 +161,7 @@ let tests =
               let addr1 = addr0 ||| System.Convert.ToInt64 (mask.Replace ('X', '0'), 2)
               
               //// TODO: switch-out powns with shifts
-              let xCount = xPositions.Length
+              
               //let s = seq {
               //      for i in 0L..pown 2L (xCount - 1) do
               //          for xPos in xPositions do
@@ -150,22 +179,41 @@ let tests =
               //      yield addr1 ||| xMask
               //  }
 
-              let addresses = seq {
-                for i in 0L..2L<<<(xCount - 1) do
-                    // TODO: Replace with reduce on xPositions
-                    let mutable xMask = 0L
-                    let mutable n = 0
-                    for xPos in xPositions do
-                        //printfn $"nth bit of {i} is {i>>>n}"
-                        //xMask <- ((i>>>n) <<< (xPos)) ||| xMask
-                        //xMask <- ((i <<< (xPos)) &&& (1L <<< xPos)) ||| xMask
-                        xMask <- ((i &&& (1L <<< n) >>> n ) <<< xPos) ||| xMask
-                        n <- n + 1
-                        //xMask <- (i <<< xPos) ||| xMask
-                    yield addr1 ||| xMask
-                  }
+              //let addresses = seq {
+              //  for i in 0L..2L<<<(xCount - 1) do
+              //      // TODO: Replace with reduce on xPositions
+              //      let mutable xMask = 0L
+              //      let mutable n = 0
+              //      for xPos in xPositions do
+              //          //printfn $"nth bit of {i} is {i>>>n}"
+              //          //xMask <- ((i>>>n) <<< (xPos)) ||| xMask
+              //          //xMask <- ((i <<< (xPos)) &&& (1L <<< xPos)) ||| xMask
+              //          xMask <- ((i &&& (1L <<< n) >>> n ) <<< xPos) ||| xMask
+              //          n <- n + 1
+              //          //xMask <- (i <<< xPos) ||| xMask
+              //      yield addr1 ||| xMask
+              //    }
 
-              printfn "%A" addresses
+              let addresses = seq {
+                    for i in 0L..(2L<<<xCount-1) - 1L do
+                        // TODO: Replace with reduce on xPositions
+                        //let mutable xVals = 0L
+                        //let mutable n = 0
+                        
+                        //yield addr1 ||| xMask 0L (xPositions.Length - 1) i xPositions
+                        let xVals = xVals 0L (xPositions.Length - 1) i xPositions
+                        //for xPos in xPositions do
+                        //    //printfn $"nth bit of {i} is {i>>>n}"
+                        //    //xMask <- ((i>>>n) <<< (xPos)) ||| xMask
+                        //    //xMask <- ((i <<< (xPos)) &&& (1L <<< xPos)) ||| xMask
+                        //    xVals <- ((i &&& (1L <<< n) >>> n ) <<< xPos) ||| xVals
+                        //    n <- n + 1
+                        //    xVals <- (i <<< xPos) ||| xVals
+                        printfn "%s" (System.Convert.ToString(xVals, 2).PadLeft(8, '0'))
+                        yield (addr1 &&& ~~~xMask ) ||| (xMask &&& xVals)
+                    }
+
+              printfn "%A" (Array.ofSeq addresses)
               
               Expect.isTrue true ""
           } ]
