@@ -41,7 +41,7 @@ let isInside seats row col =
     && row < Array2D.length1 seats
     && col < Array2D.length2 seats
 
-let countNeighbours (seats: Seat [,]) row col =
+let countNeighbors (seats: Seat [,]) row col =
     seq {
         for dRow in -1 .. 1 do
             for dCol in -1 .. 1 do
@@ -53,11 +53,11 @@ let countNeighbours (seats: Seat [,]) row col =
     |> Seq.length
 
 let nextSeatState seats row col =
-    let neighbors = countNeighbours seats row col
+    let neighbors = countNeighbors seats row col
 
     if seats.[row, col] = Floor then Floor
     else if neighbors = 0 then Occupied
-    else if neighbors = 4 then Empty
+    else if neighbors >= 4 then Empty
     else seats.[row, col]
 
 let next (seats: Seat [,]): Seat [,] =
@@ -140,7 +140,7 @@ let tests =
 
               Expect.equal (format actual) (format expected) ""
           }
-          test "Can get second iteration" {
+          ftest "Can get second iteration" {
               let i1 = parse example1
               let expected = parse example2
 
