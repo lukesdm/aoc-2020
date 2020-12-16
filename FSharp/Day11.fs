@@ -2,17 +2,6 @@
 
 open Expecto
 
-let example = "L.LL.LL.LL
-LLLLLLL.LL
-L.L.L..L..
-LLLL.LL.LL
-L.LL.LL.LL
-L.LLLLL.LL
-..L.L.....
-LLLLLLLLLL
-L.LLLLLL.L
-L.LLLLL.LL"
-
 type Seat =
     | Empty
     | Occupied
@@ -27,7 +16,6 @@ let parseRow (line: string): seq<Seat> =
             | '.' -> Floor
             | '#' -> Occupied
             | _ -> failwith "Unexpected character")
-
 
 /// Parses the input text into the initial state
 let parse (input: string): Seat [,] =
@@ -64,12 +52,16 @@ let next (seats: Seat [,]): Seat [,] =
     seats
     |> Array2D.mapi (fun row col _ -> nextSeatState seats row col)
 
+/// Runs until stable, given the initial state. Returns the number of iterations and final state
+let rec run i (seats: Seat [,]): int * Seat [,] =
+    let nxt = next seats
+    if seats = nxt then (i, seats) else run (i + 1) (nxt)
+
 let toChar (seat: Seat): char =
     match seat with
     | Empty -> 'L'
     | Floor -> '.'
     | Occupied -> '#'
-
 
 let format (seats: Seat [,]): string =
     let sb = System.Text.StringBuilder()
@@ -116,6 +108,17 @@ L.L.L..L..
 #.LLLLLL.L
 #.#LLLL.##"
 
+let example3 = "#.##.L#.##
+#L###LL.L#
+L.#.#..#..
+#L##.##.L#
+#.##.LL.LL
+#.###L#.##
+..#.#.....
+#L######L#
+#.LL###L.L
+#.#L###.##"
+
 
 let tests =
     testList
@@ -140,11 +143,26 @@ let tests =
 
               Expect.equal (format actual) (format expected) ""
           }
-          ftest "Can get second iteration" {
+          test "Can get second iteration" {
               let i1 = parse example1
               let expected = parse example2
 
               let actual = next i1
 
               Expect.equal (format actual) (format expected) ""
+          }
+          test "Can get third iteration" {
+              let i2 = parse example2
+              let expected = parse example3
+
+              let actual = next i2
+
+              Expect.equal (format actual) (format expected) ""
+          }
+          test "Becomes stable at 6th iteration" {
+              let i0 = parse example0
+
+              let (i, _) = run 0 i0
+
+              Expect.equal i 5 ""
           } ]
