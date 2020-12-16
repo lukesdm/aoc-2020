@@ -53,9 +53,34 @@ let next (seats: Seat [,]): Seat [,] =
     |> Array2D.mapi (fun row col _ -> nextSeatState seats row col)
 
 /// Runs until stable, given the initial state. Returns the number of iterations and final state
-let rec run i (seats: Seat [,]): int * Seat [,] =
+let rec run (i: int) (seats: Seat [,]): int * Seat [,] =
     let nxt = next seats
-    if seats = nxt then (i, seats) else run (i + 1) (nxt)
+    if seats = nxt then (i, seats) else run (i + 1) nxt
+
+/// A helper function for 2D arrays, which aren't compatible with Seq functions
+let countWhere (arr: 'TItem [,]) (predicate: 'TItem -> bool): int =
+    let mutable count = 0
+    Array2D.iteri (fun _ _ item -> count <- count + if predicate item then 1 else 0) arr
+    count
+
+// Attempt at recursive version of above - there's a problem (see TODO), which in fixing would probably end up with this being way more messy than the above
+//let rec countWhereInner acc row col arr predicate =
+//    if not (isInside arr row col) then
+//        (acc, row, col)
+//    else
+//        let o = if (predicate arr.[row, col]) then 1 else 0
+//        // TODO: Fix (don't add 1 to both row AND cols here)
+//        countWhereInner (acc + o) (row + 1) (col + 1) arr predicate
+
+//let countWhere arr predicate =
+//    let (result, _, _) = countWhereInner 0 0 0 arr predicate
+//    result
+
+let part1 input =
+    let (_, seats) = parse input |> run 0
+    countWhere seats (fun seat -> seat = Occupied)
+
+let solve = part1
 
 let toChar (seat: Seat): char =
     match seat with
@@ -165,4 +190,9 @@ let tests =
               let (i, _) = run 0 i0
 
               Expect.equal i 5 ""
+          }
+          test "Part 1 - Can solve for example" {
+              let result = part1 example0
+
+              Expect.equal result 37 ""
           } ]
