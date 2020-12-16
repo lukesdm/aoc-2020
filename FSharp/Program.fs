@@ -74,6 +74,9 @@ let main argv =
             let input = File.ReadAllText "day9.txt"
 
             Day9.solve (input.TrimEnd()) :> Object
+        | "11" ->
+            let _ = runTestsWithCLIArgs [] [||] Day11.tests
+            "TODO" :> Object
         // Skip a few
         | "14" ->
             let _ = runTestsWithCLIArgs [] [||] Day14.tests
