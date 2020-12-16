@@ -40,6 +40,7 @@ let countNeighbors (seats: Seat [,]) row col =
     |> Seq.filter (fun (dRow, dCol) -> seats.[row + dRow, col + dCol] = Occupied)
     |> Seq.length
 
+/// Calculates the next state for the given seat
 let nextSeatState seats row col =
     let neighbors = countNeighbors seats row col
 
@@ -48,6 +49,7 @@ let nextSeatState seats row col =
     else if neighbors >= 4 then Empty
     else seats.[row, col]
 
+/// Calculates the next iteration of seat arrangement
 let next (seats: Seat [,]): Seat [,] =
     seats
     |> Array2D.mapi (fun row col _ -> nextSeatState seats row col)
@@ -56,6 +58,24 @@ let next (seats: Seat [,]): Seat [,] =
 let rec run (i: int) (seats: Seat [,]): int * Seat [,] =
     let nxt = next seats
     if seats = nxt then (i, seats) else run (i + 1) nxt
+
+/// Generator of seat arrangements. Infinite.
+let seatsSeq (i0: Seat [,]) =
+    i0
+    |> Seq.unfold
+        (fun state ->
+            let nxt = next state
+            Some(nxt, nxt))
+
+/// Runs seat arrangment generator until stable, given the initial state. Returns the number of iterations and final state
+let runGen (i0: Seat [,]): int * Seat [,] =
+    i0
+    |> seatsSeq
+    |> Seq.indexed
+    |> Seq.pairwise
+    |> Seq.takeWhile (fun (prev, curr) -> snd prev <> snd curr)
+    |> Seq.last
+    |> snd
 
 /// A helper function for 2D arrays, which aren't compatible with Seq functions
 let countWhere (arr: 'TItem [,]) (predicate: 'TItem -> bool): int =
@@ -184,12 +204,20 @@ let tests =
 
               Expect.equal (format actual) (format expected) ""
           }
-          test "Becomes stable at 6th iteration" {
+          test "Becomes stable at 6th iteration - recursive function" {
               let i0 = parse example0
 
               let (i, _) = run 0 i0
 
               Expect.equal i 5 ""
+          }
+          test "Becomes stable at 6th iteration - generator" {
+              let i0 = parse example0
+
+              let (i, _) = runGen i0
+
+              // i0 is not part of sequence, so end is 1 lower.
+              Expect.equal i 4 ""
           }
           test "Part 1 - Can solve for example" {
               let result = part1 example0
