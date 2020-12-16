@@ -18,8 +18,6 @@ type Seat =
     | Occupied
     | Floor
 
-type State = State of Seat [,]
-
 let parseRow (line: string): seq<Seat> =
     line
     |> Seq.map
@@ -32,11 +30,10 @@ let parseRow (line: string): seq<Seat> =
 
 
 /// Parses the input text into the initial state
-let parse (input: string): State =
+let parse (input: string): Seat [,] =
     input.Replace("\r\n", "\n").Split("\n")
     |> Seq.map parseRow
     |> array2D
-    |> State
 
 
 // TODO: Implement
@@ -52,14 +49,28 @@ let nextSeatState seats row col =
     else if neighbors = 4 then Empty
     else seats.[row, col]
 
-let next (state: State): State =
-    let (State seats) = state
+let next (seats: Seat [,]): Seat [,] =
+    seats
+    |> Array2D.mapi (fun row col _ -> nextSeatState seats row col)
 
-    let nextS =
-        seats
-        |> Array2D.mapi (fun row col _ -> nextSeatState seats row col)
+let toChar (seat: Seat): char =
+    match seat with
+    | Empty -> 'L'
+    | Floor -> '.'
+    | Occupied -> '#'
 
-    State nextS
+
+let format (seats: Seat [,]): string =
+    let sb = System.Text.StringBuilder()
+
+    for row in 0 .. Array2D.length1 seats - 1 do
+        for col in 0 .. Array2D.length2 seats - 1 do
+            let c = toChar seats.[row, col]
+            sb.Append(c) |> ignore
+
+        sb.AppendLine() |> ignore
+
+    sb.ToString()
 
 let example0 = "L.LL.LL.LL
 LLLLLLL.LL
@@ -103,10 +114,8 @@ let tests =
 .LL"
 
             let expected =
-                State(
-                    array2D [ [ Empty; Floor; Empty ]
-                              [ Floor; Empty; Empty ] ]
-                )
+                array2D [ [ Empty; Floor; Empty ]
+                          [ Floor; Empty; Empty ] ]
 
             let actual = parse input
 
@@ -117,6 +126,18 @@ let tests =
               let expected = parse example1
 
               let actual = next init
+
+              printfn "%s" (format actual)
+
+              Expect.equal actual expected ""
+          }
+          test "Can get second iteration" {
+              let i1 = parse example1
+              let expected = parse example2
+
+              let actual = next i1
+
+              printfn "%s" (format actual)
 
               Expect.equal actual expected ""
           } ]
