@@ -35,12 +35,23 @@ let parse (input: string): Seat [,] =
     |> Seq.map parseRow
     |> array2D
 
+let isInside seats row col =
+    row >= 0
+    && col >= 0
+    && row < Array2D.length1 seats
+    && col < Array2D.length2 seats
 
-// TODO: Implement
-let countNeighbours (seats: Seat [,]) row col = 0
+let countNeighbours (seats: Seat [,]) row col =
+    seq {
+        for dRow in -1 .. 1 do
+            for dCol in -1 .. 1 do
+                if isInside seats (row + dRow) (col + dCol)
+                   && (dRow, dCol) <> (0, 0) then
+                    yield (dRow, dCol)
+    }
+    |> Seq.filter (fun (dRow, dCol) -> seats.[row + dRow, col + dCol] = Occupied)
+    |> Seq.length
 
-
-//let nextSeatState seats (row, col)  =
 let nextSeatState seats row col =
     let neighbors = countNeighbours seats row col
 
@@ -127,9 +138,7 @@ let tests =
 
               let actual = next init
 
-              printfn "%s" (format actual)
-
-              Expect.equal actual expected ""
+              Expect.equal (format actual) (format expected) ""
           }
           test "Can get second iteration" {
               let i1 = parse example1
@@ -137,7 +146,5 @@ let tests =
 
               let actual = next i1
 
-              printfn "%s" (format actual)
-
-              Expect.equal actual expected ""
+              Expect.equal (format actual) (format expected) ""
           } ]
