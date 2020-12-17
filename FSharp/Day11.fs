@@ -23,6 +23,24 @@ let parse (input: string): Seat [,] =
     |> Seq.map parseRow
     |> array2D
 
+let toChar (seat: Seat): char =
+    match seat with
+    | Empty -> 'L'
+    | Floor -> '.'
+    | Occupied -> '#'
+
+let format (seats: Seat [,]): string =
+    let sb = System.Text.StringBuilder()
+
+    for row in 0 .. Array2D.length1 seats - 1 do
+        for col in 0 .. Array2D.length2 seats - 1 do
+            let c = toChar seats.[row, col]
+            sb.Append(c) |> ignore
+
+        sb.AppendLine() |> ignore
+
+    sb.ToString()
+
 let isInside seats row col =
     row >= 0
     && col >= 0
@@ -83,42 +101,82 @@ let countWhere (arr: 'TItem [,]) (predicate: 'TItem -> bool): int =
     Array2D.iteri (fun _ _ item -> count <- count + if predicate item then 1 else 0) arr
     count
 
-// Attempt at recursive version of above - there's a problem (see TODO), which in fixing would probably end up with this being way more messy than the above
-//let rec countWhereInner acc row col arr predicate =
-//    if not (isInside arr row col) then
-//        (acc, row, col)
-//    else
-//        let o = if (predicate arr.[row, col]) then 1 else 0
-//        // TODO: Fix (don't add 1 to both row AND cols here)
-//        countWhereInner (acc + o) (row + 1) (col + 1) arr predicate
-
-//let countWhere arr predicate =
-//    let (result, _, _) = countWhereInner 0 0 0 arr predicate
-//    result
-
 let part1 input =
     let (_, seats) = parse input |> run 0
     countWhere seats (fun seat -> seat = Occupied)
 
-let solve = part1
+// ***PART 2***
 
-let toChar (seat: Seat): char =
-    match seat with
-    | Empty -> 'L'
-    | Floor -> '.'
-    | Occupied -> '#'
+/// Check whether there's an occupied seat, by marching along a vector
+let rec checkHit (posRow, posCol) (seats: Seat [,]) (dRow, dCol): bool =
+    let (newRow, newCol) = (posRow + dRow, posCol + dCol)
 
-let format (seats: Seat [,]): string =
-    let sb = System.Text.StringBuilder()
+    if (not (isInside seats newRow newCol))
+       || seats.[newRow, newCol] = Empty then
+        false
+    else if seats.[newRow, newCol] = Occupied then
+        true
+    else
+        checkHit (newRow, newCol) seats (dRow, dCol)
 
-    for row in 0 .. Array2D.length1 seats - 1 do
-        for col in 0 .. Array2D.length2 seats - 1 do
-            let c = toChar seats.[row, col]
-            sb.Append(c) |> ignore
+/// Part 2 - Count neighbors by line of sight in 8 directions
+let countNeighbors2 (seats: Seat [,]) (row: int) (col: int): int =
+    let vectors =
+        seq {
+            for dRow in -1 .. 1 do
+                for dCol in -1 .. 1 do
+                    if (dRow, dCol) <> (0, 0) then yield (dRow, dCol)
+        }
 
-        sb.AppendLine() |> ignore
+    vectors
+    |> Seq.filter (checkHit (row, col) seats)
+    |> Seq.length
 
-    sb.ToString()
+/// Part 2 - Calculates the next state for the given seat
+let nextSeatState2 seats row col =
+    let neighbors = countNeighbors2 seats row col
+
+    if seats.[row, col] = Floor then Floor
+    else if neighbors = 0 then Occupied
+    else if neighbors >= 5 then Empty
+    else seats.[row, col]
+
+/// Part 2 - Calculates the next iteration of seat arrangement
+let next2 (seats: Seat [,]): Seat [,] =
+    seats
+    |> Array2D.mapi (fun row col _ -> nextSeatState2 seats row col)
+
+/// Part 2 - Generator of seat arrangements. Infinite.
+let seatsSeq2 (i0: Seat [,]) =
+    i0
+    |> Seq.unfold
+        (fun state ->
+            let nxt = next2 state
+            Some(nxt, nxt))
+
+let inspect input =
+    printfn "%s" (format input)
+    input
+
+/// Part 2 - Runs seat arrangment generator until stable, given the initial state. Returns the number of iterations and final state
+let runGen2 (i0: Seat [,]): int * Seat [,] =
+    i0
+    |> seatsSeq2
+    //|> Seq.map inspect
+    |> Seq.indexed
+    |> Seq.pairwise
+    |> Seq.takeWhile (fun (prev, curr) -> snd prev <> snd curr)
+    |> Seq.last
+    |> snd
+
+let part2 input =
+    let (_, seats) = parse input |> runGen2
+    countWhere seats (fun seat -> seat = Occupied)
+
+// ***...***
+
+let solve input = (part1 input), (part2 input)
+
 
 let example0 = "L.LL.LL.LL
 LLLLLLL.LL
@@ -223,4 +281,39 @@ let tests =
               let result = part1 example0
 
               Expect.equal result 37 ""
+          }
+          test "Part 2 - Can count neighbors (A)" {
+              let input = ".......#.
+...#.....
+.#.......
+.........
+..#L....#
+....#....
+.........
+#........
+...#....."
+              let seats = parse input
+              let expected = 8
+
+              let actual = countNeighbors2 seats 4 3
+
+              Expect.equal actual expected ""
+          }
+          test "Part 2 - Can count neghbors (B)" {
+              let input = ".............
+.L.L.#.#.#.#.
+............."
+              let seats = parse input
+              let expected = 0
+
+              let actual = countNeighbors2 seats 1 1
+
+              Expect.equal actual expected ""
+          }
+          test "Part 2 - Can solve for example" {
+              let expected = 26
+
+              let actual = part2 example0
+
+              Expect.equal actual expected ""
           } ]
