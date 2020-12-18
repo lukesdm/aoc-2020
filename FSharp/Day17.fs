@@ -4,6 +4,7 @@
 module Day17
 
 open Expecto
+open System
 
 /// Cell position: X, Y, Z
 type Cell = int * int * int
@@ -36,10 +37,51 @@ let countNeighbors cells (x, y, z) =
     |> Seq.filter (fun (dx, dy, dz) -> Set.contains (x + dx, y + dy, z + dz) cells)
     |> Seq.length
 
-let next (cells: Cells): Cells =
+type Bounds = Cell * Cell
+/// Gets the bounding box for the given active cells
+let getBounds (activeCells: Cells): Bounds =
+    let init =
+        ((Int32.MaxValue, Int32.MaxValue, Int32.MaxValue), (Int32.MinValue, Int32.MinValue, Int32.MinValue))
+
+    activeCells
+    |> Seq.fold
+        (fun currBounds cell ->
+            let ((minX, minY, minZ), (maxX, maxY, maxZ)) = currBounds
+            let (cX, cY, cZ) = cell
+            ((min cX minX, min cY minY, min cZ minZ), (max cX maxX, max cY maxY, max cZ maxZ)))
+        init
+
+/// Given a set of active cells, returns the next generation of active cells
+let next (activeCells: Cells): Cells =
+    (*
+    During a cycle, all cubes simultaneously change their state according to the following rules:
+
+    If a cube is active and exactly 2 or 3 of its neighbors are also active, the cube remains active. Otherwise, the cube becomes inactive.
+    If a cube is inactive but exactly 3 of its neighbors are active, the cube becomes active. Otherwise, the cube remains inactive.
+    *)
+
+    let isActive =
+        fun cell -> Seq.contains cell activeCells
+
+    let ((xMin, yMin, zMin), (xMax, yMax, zMax)) = getBounds activeCells
+
+    // Cell space: bounding box with 1-cell padding
+    let cells =
+        seq {
+            for x in xMin - 1 .. xMax + 1 do
+                for y in yMin - 1 .. yMax + 1 do
+                    for z in zMin - 1 .. zMax + 1 do
+                        yield (x, y, z)
+        }
+
     seq {
         for cell in cells do
-            yield cell
+            let nc = countNeighbors activeCells cell
+
+            match nc with
+            | 2 when (isActive cell) -> yield cell
+            | 3 -> yield cell
+            | _ -> ()
     }
     |> Set.ofSeq
 
@@ -96,6 +138,27 @@ let tests =
               let count_actual = countNeighbors state cell
 
               Expect.equal count_actual count_expected ""
+          }
+          test "Can get bounding box" {
+              let state =
+                  Set.ofList [ (0, 0, -1)
+                               (2, 1, -1)
+                               (1, 2, -1)
+
+                               (0, 0, 0)
+                               (2, 0, 0)
+                               (1, 1, 0)
+                               (1, 2, 0)
+
+                               (0, 0, 1)
+                               (2, 1, 1)
+                               (1, 2, 1) ]
+
+              let bounds_expected = ((0, 0, -1), (2, 2, 1))
+
+              let bounds_actual = getBounds state
+
+              Expect.equal bounds_actual bounds_expected ""
           }
           test "Can get first iteration" {
               let input = ".#.
