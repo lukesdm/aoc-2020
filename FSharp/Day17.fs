@@ -12,7 +12,8 @@ type Cell = int * int * int
 /// Collection of active cells
 type Cells = Set<Cell>
 
-let toXyz row col = (col, row, 0)
+let toXyz rowCount colCount row col =
+    (col - colCount / 2, row - rowCount / 2, 0)
 
 /// Parses the input string into a collection of active cells
 let parse (input: string): Cells =
@@ -23,7 +24,8 @@ let parse (input: string): Cells =
     seq {
         for (row, line) in lines do
             for col in 0 .. lines.Length - 1 do
-                if line.[col] = '#' then yield toXyz row col
+                if line.[col] = '#'
+                then yield toXyz lines.Length line.Length row col
     }
     |> Set.ofSeq
 
@@ -78,6 +80,8 @@ let next (activeCells: Cells): Cells =
         for cell in cells do
             let nc = countNeighbors activeCells cell
 
+            //if (isActive cell) && nc = 2 || nc = 3 then yield cell
+            //if not (isActive cell) && nc = 3 then yield cell
             match nc with
             | 2 when (isActive cell) -> yield cell
             | 3 -> yield cell
@@ -93,7 +97,15 @@ let gen i0 =
             Some(nxt, nxt))
 
 // Given initial state i0, runs the generator for n iterations.
-let run i0 n = gen i0 |> Seq.item n
+let run i0 n =
+    if n = 0 then i0 else gen i0 |> Seq.item (n - 1)
+
+let part1 input =
+    let i0 = parse input
+    let i6 = run i0 6
+    i6.Count
+
+let solve input = part1 input
 
 let tests =
     testList
@@ -107,11 +119,11 @@ let tests =
 ###"
 
             let activeCells_expected =
-                Set.ofList [ (1, 0, 0)
-                             (2, 1, 0)
-                             (0, 2, 0)
-                             (1, 2, 0)
-                             (2, 2, 0) ]
+                Set.ofList [ (0, -1, 0)
+                             (1, 0, 0)
+                             (-1, 1, 0)
+                             (0, 1, 0)
+                             (1, 1, 0) ]
 
             let activeCells_actual = parse input
 
@@ -160,45 +172,70 @@ let tests =
 
               Expect.equal bounds_actual bounds_expected ""
           }
+          test "Simple" {
+              //z= 0      -1    0    1
+              //  .#.     ...  ...  ...
+              //  ..# --> .##  .##  .##
+              //  .#.     ...  ...  ...
+
+              let i0 =
+                  Set.ofList [ (0, -1, 0)
+                               (1, 0, 0)
+                               (0, 1, 0) ]
+
+              let i1_expected =
+                  Set.ofList [ (0, 0, -1)
+                               (1, 0, -1)
+                               (0, 0, 0)
+                               (1, 0, 0)
+                               (0, 0, 1)
+                               (1, 0, 1) ]
+
+              let i1_actual = next i0
+              let i2_actual = next i1_actual
+              let i3_actual = next i2_actual
+
+              Expect.equal i1_actual i1_expected ""
+          }
           test "Can get first iteration" {
               let input = ".#.
 ..#
 ###"
-
               let i0 = parse input
 
-              (*
-              z=-1
-              #..
-              ..#
-              .#.
-
-              z=0
-              #.#
-              .##
-              .#.
-
-              z=1
-              #..
-              ..#
-              .#.
-              *)
-
+              // Note: These come from the AoC page, where it seems like the grid showing these is centered at 0, 1, 0 not 0, 0, 0 as it first appears.
+              // z=-1    0      1
+              // #..    #.#    #..
+              // ..#    .##    ..#
+              // .#.    .#.    .#.
               let i1_expected =
-                  Set.ofList [ (0, 0, -1)
-                               (2, 1, -1)
-                               (1, 2, -1)
+                  Set.ofList [ (-1, 0, -1)
+                               (1, 1, -1)
+                               (0, 2, -1)
 
-                               (0, 0, 0)
-                               (2, 0, 0)
+                               (-1, 0, 0)
+                               (1, 0, 0)
+                               (0, 1, 0)
                                (1, 1, 0)
-                               (1, 2, 0)
+                               (0, 2, 0)
 
-                               (0, 0, 1)
-                               (2, 1, 1)
-                               (1, 2, 1) ]
+                               (-1, 0, 1)
+                               (1, 1, 1)
+                               (0, 2, 1) ]
 
               let i1_actual = run i0 1
 
               Expect.equal i1_actual i1_expected ""
+          }
+          test "Correct active cell count after 6" {
+              let input = ".#.
+..#
+###"
+              let i0 = parse input
+              let count_expected = 112
+
+              let i6 = run i0 6
+              let count_actual = i6.Count
+
+              Expect.equal count_actual count_expected ""
           } ]
