@@ -80,9 +80,12 @@ let initialState (input: string): Tiles =
 
 let countNeighbors blackTiles (q, r) =
     seq {
-        for dq in -1 .. 1 do
-            for dr in -1 .. 1 do
-                if (dq, dr) <> (0, 0) then yield (dq, dr)
+        (-1, 0)
+        (0, -1)
+        (1, -1)
+        (1, 0)
+        (0, 1)
+        (-1, 1)
     }
     |> Seq.filter (fun (dq, dr) -> Set.contains (q + dq, r + dr) blackTiles)
     |> Seq.length
@@ -99,6 +102,7 @@ let getBounds (blackTiles: Tiles): TileQR * TileQR =
             ((min cQ minQ, min cR minR), (max cQ maxQ, max cR maxR)))
         init
 
+/// Calculate the next generation of the layout, given the current set of black tiles.
 let next (blackTiles: Tiles): Tiles =
     let isBlack = fun cell -> Seq.contains cell blackTiles
 
@@ -123,16 +127,30 @@ let next (blackTiles: Tiles): Tiles =
     }
     |> Set.ofSeq
 
+/// Sequence of generations, indexable by day. Infinite.
 let gen i0 =
-    i0
-    |> Seq.unfold
-        (fun state ->
-            let nxt = next state
-            Some(nxt, nxt))
+    let gens =
+        i0
+        |> Seq.unfold
+            (fun state ->
+                let nxt = next state
+                Some(nxt, nxt))
+
+    // Yield sequence, with intial state added back in at start.
+    seq {
+        i0
+        yield! gens
+    }
+
+let part2 (input: string): int =
+    initialState input
+    |> gen
+    |> Seq.item 100
+    |> Seq.length
 
 // ***...***
 
-let solve input = part1 input
+let solve input = (part1 input, part2 input)
 
 let example = "sesenwnenenewseeswwswswwnenewsewsw
 neeenesenwnwwswnenewnwwsewnenwseswesw
@@ -217,7 +235,7 @@ let tests =
 
               Expect.equal count_actual count_expected ""
           }
-          test "Part 2 - Have correct number of tiles after day 1" {
+          test "Part 2 - Count correct number of tiles given the example pattern, on day 1" {
               let input = example
               let i0 = initialState input
 
@@ -227,14 +245,66 @@ let tests =
 
               Expect.equal count_actual count_expected ""
           }
-          ftest "Part 2 - Have correct number of tiles after day 2" {
+          test "Part 2 - Simple pattern, day 1" {
+              let i0: Tiles = [ (-1, 0); (0, -1) ] |> Set.ofList
+
+              let i1_expected =
+                  [ (-1, 0); (0, -1); (0, 0); (-1, -1) ]
+                  |> Set.ofList
+
+              let i1_actual = next i0
+
+              Expect.equal i1_actual i1_expected ""
+          }
+          test "Part 2 - Simple pattern, day 2" {
+              let i1: Tiles =
+                  [ (-1, 0); (0, -1); (0, 0); (-1, -1) ]
+                  |> Set.ofList
+
+              let i2_expected =
+                  [ (0, 0)
+                    (-1, -1)
+                    (-1, 1)
+                    (-2, 0)
+                    (0, -2)
+                    (1, -1) ]
+                  |> Set.ofList
+
+              let i2_actual = next i1
+
+              Expect.equal (List.ofSeq i2_actual) (List.ofSeq i2_expected) ""
+          }
+          test "Part 2 - Have correct number of tiles after day 2" {
               let input = example
               let i0 = initialState input
 
               let count_expected = 12
 
-              let results = i0 |> gen |> Seq.take(8) |> Array.ofSeq
-              let count_actual = Seq.length results.[1]
+              let results = i0 |> gen |> Seq.item (2)
+              let count_actual = Seq.length results
 
               Expect.equal count_actual count_expected ""
+          }
+          test "Part 2 - Have correct number of tiles up to day 100" {
+              let input = example
+              let i0 = initialState input
+
+              let counts_expected =
+                  [ (1, 15)
+                    (2, 12)
+                    (3, 25)
+                    (4, 14)
+                    (5, 23)
+                    (6, 28)
+                    (20, 132)
+                    (100, 2208) ]
+
+              let results = i0 |> gen |> Seq.cache
+
+              let counts_actual =
+                  counts_expected
+                  |> Seq.map (fun (i, _) -> (i, Seq.item i results |> Seq.length))
+                  |> List.ofSeq
+
+              Expect.equal counts_actual counts_expected ""
           } ]
