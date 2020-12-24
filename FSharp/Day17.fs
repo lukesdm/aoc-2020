@@ -80,8 +80,6 @@ let next (activeCells: Cells): Cells =
         for cell in cells do
             let nc = countNeighbors activeCells cell
 
-            //if (isActive cell) && nc = 2 || nc = 3 then yield cell
-            //if not (isActive cell) && nc = 3 then yield cell
             match nc with
             | 2 when (isActive cell) -> yield cell
             | 3 -> yield cell
@@ -105,12 +103,115 @@ let part1 input =
     let i6 = run i0 6
     i6.Count
 
-let solve input = part1 input
+// ***PART 2***
+// Mostly a copy and paste of part1, then adding 4th dimension W
+
+/// Cell position: X, Y, Z, W
+type Cell4D = int * int * int * int
+
+/// Collection of active cells
+type Cell4Ds = Set<Cell4D>
+
+let toXyzw rowCount colCount row col =
+    (col - colCount / 2, row - rowCount / 2, 0, 0)
+
+/// Parses the input string into a collection of active cells
+let parse4D (input: string): Cell4Ds =
+    let lines =
+        input.Replace("\r\n", "\n").Split('\n')
+        |> Array.indexed
+
+    seq {
+        for (row, line) in lines do
+            for col in 0 .. lines.Length - 1 do
+                if line.[col] = '#'
+                then yield toXyzw lines.Length line.Length row col
+    }
+    |> Set.ofSeq
+
+let countNeighbors4D cells (x, y, z, w) =
+    seq {
+        for dx in -1 .. 1 do
+            for dy in -1 .. 1 do
+                for dz in -1 .. 1 do
+                    for dw in -1 .. 1 do
+                        if (dx, dy, dz, dw) <> (0, 0, 0, 0) then yield (dx, dy, dz, dw)
+    }
+    |> Seq.filter (fun (dx, dy, dz, dw) -> Set.contains (x + dx, y + dy, z + dz, w + dw) cells)
+    |> Seq.length
+
+type Bounds4D = Cell4D * Cell4D
+/// Gets the bounding box for the given active cells
+let getBounds4D (activeCells: Cell4Ds): Bounds4D =
+    let init =
+        ((Int32.MaxValue, Int32.MaxValue, Int32.MaxValue, Int32.MaxValue), (Int32.MinValue, Int32.MinValue, Int32.MinValue, Int32.MinValue))
+
+    activeCells
+    |> Seq.fold
+        (fun currBounds cell ->
+            let ((minX, minY, minZ, minW), (maxX, maxY, maxZ, maxW)) = currBounds
+            let (cX, cY, cZ, cW) = cell
+            ((min cX minX, min cY minY, min cZ minZ, min cW minW), (max cX maxX, max cY maxY, max cZ maxZ, max cW maxW)))
+        init
+
+/// Given a set of active cells, returns the next generation of active cells
+let next4D (activeCells: Cell4Ds): Cell4Ds =
+    (*
+    During a cycle, all cubes simultaneously change their state according to the following rules:
+
+    If a cube is active and exactly 2 or 3 of its neighbors are also active, the cube remains active. Otherwise, the cube becomes inactive.
+    If a cube is inactive but exactly 3 of its neighbors are active, the cube becomes active. Otherwise, the cube remains inactive.
+    *)
+
+    let isActive =
+        fun cell -> Seq.contains cell activeCells
+
+    let ((xMin, yMin, zMin, wMin), (xMax, yMax, zMax, wMax)) = getBounds4D activeCells
+
+    // Cell space: bounding box with 1-cell padding
+    let cells =
+        seq {
+            for x in xMin - 1 .. xMax + 1 do
+                for y in yMin - 1 .. yMax + 1 do
+                    for z in zMin - 1 .. zMax + 1 do
+                        for w in wMin - 1 .. wMax + 1 do
+                            yield (x, y, z, w)
+        }
+
+    seq {
+        for cell in cells do
+            let nc = countNeighbors4D activeCells cell
+
+            match nc with
+            | 2 when (isActive cell) -> yield cell
+            | 3 -> yield cell
+            | _ -> ()
+    }
+    |> Set.ofSeq
+
+let gen4D i0 =
+    i0
+    |> Seq.unfold
+        (fun state ->
+            let nxt = next4D state
+            Some(nxt, nxt))
+
+// Given initial state i0, runs the generator for n iterations.
+let run4D i0 n =
+    if n = 0 then i0 else gen4D i0 |> Seq.item (n - 1)
+
+let part2 input =
+    let i0 = parse4D input
+    let i6 = run4D i0 6
+    i6.Count
+// ***...***
+
+let solve input = (part1 input, part2 input)
 
 let tests =
     testList
         "Day17"
-        [ test "Can Parse" {
+        [ test "Part 1 - Can Parse" {
             // X = Left to Right
             // Y = Top to Bottom
             // Z = Far to Near
@@ -129,7 +230,7 @@ let tests =
 
             Expect.equal activeCells_actual activeCells_expected ""
           }
-          test "Can count active neighbors" {
+          test "Part 1 - Can count active neighbors" {
               let state =
                   Set.ofList [ (0, 0, -1) // <-- neighbor
                                (2, 1, -1)
@@ -151,7 +252,7 @@ let tests =
 
               Expect.equal count_actual count_expected ""
           }
-          test "Can get bounding box" {
+          test "Part 1- Can get bounding box" {
               let state =
                   Set.ofList [ (0, 0, -1)
                                (2, 1, -1)
@@ -172,7 +273,7 @@ let tests =
 
               Expect.equal bounds_actual bounds_expected ""
           }
-          test "Simple" {
+          test "Part 1 - Simple" {
               //z= 0      -1    0    1
               //  .#.     ...  ...  ...
               //  ..# --> .##  .##  .##
@@ -192,12 +293,10 @@ let tests =
                                (1, 0, 1) ]
 
               let i1_actual = next i0
-              let i2_actual = next i1_actual
-              let i3_actual = next i2_actual
 
               Expect.equal i1_actual i1_expected ""
           }
-          test "Can get first iteration" {
+          test "Part 1 - Can get first iteration" {
               let input = ".#.
 ..#
 ###"
@@ -227,7 +326,7 @@ let tests =
 
               Expect.equal i1_actual i1_expected ""
           }
-          test "Correct active cell count after 6" {
+          test "Part 1 - Correct active cell count after 6" {
               let input = ".#.
 ..#
 ###"
@@ -235,6 +334,18 @@ let tests =
               let count_expected = 112
 
               let i6 = run i0 6
+              let count_actual = i6.Count
+
+              Expect.equal count_actual count_expected ""
+          }
+          test "Part 2 - Correct active cell count after 6" {
+              let input = ".#.
+..#
+###"
+              let i0 = parse4D input
+              let count_expected = 848
+
+              let i6 = run4D i0 6
               let count_actual = i6.Count
 
               Expect.equal count_actual count_expected ""
