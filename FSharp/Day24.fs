@@ -27,6 +27,25 @@ let parseLine (line: string): seq<Direction> =
             | "ne" -> NE
             | _ -> failwith "Unexpected character")
 
+let add (q1, r1) (q2, r2) = (q1 + q2, r1 + r2)
+
+/// See QR (axial) coordinate system from https://www.redblobgames.com/grids/hexagons/
+let qrCoords directions =
+    directions
+    |> Seq.fold
+        (fun acc dir ->
+            add
+                acc
+                (match dir with
+                 | E -> (1, 0)
+                 | SE -> (0, 1)
+                 | SW -> (-1, 1)
+                 | W -> (-1, 0)
+                 | NW -> (0, -1)
+                 | NE -> (1, -1)))
+        (0, 0)
+
+
 let tests =
     testList
         "Day24"
@@ -58,4 +77,24 @@ let tests =
             let directions_actual = parseLine line
 
             Expect.equal (List.ofSeq directions_actual) directions_expected ""
+          }
+          test "Can calculate QR tile coordinates (1)" {
+              // "a line like esew flips a tile immediately adjacent to the reference tile"
+              let directions = [ E; SE; W ]
+
+              let coords_expected = (0, 1)
+
+              let coords_actual = qrCoords directions
+
+              Expect.equal coords_actual coords_expected ""
+          }
+          test "Can calculate QR tile coordinates (2)" {
+              // "a line like nwwswee flips the reference tile itself"
+              let directions = [ NW; W; SW; E; E ]
+
+              let coords_expected = (0, 0)
+
+              let coords_actual = qrCoords directions
+
+              Expect.equal coords_actual coords_expected ""
           } ]
