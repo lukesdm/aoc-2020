@@ -45,6 +45,41 @@ let qrCoords directions =
                  | NE -> (1, -1)))
         (0, 0)
 
+let part1 (input: string): int =
+    // QR coordinates of tiles to be flipped
+    let flipsQR =
+        input.Replace("\r\n", "\n").Split('\n')
+        |> Seq.map parseLine
+        |> Seq.map qrCoords
+
+    // All tiles start white. An odd number of flips of tile at a specific coord means that the tile will end up black
+    flipsQR
+    |> Seq.countBy (fun coord -> coord)
+    |> Seq.filter (fun (_, count) -> count % 2 = 1)
+    |> Seq.length
+
+let solve input = part1 input
+
+let example = "sesenwnenenewseeswwswswwnenewsewsw
+neeenesenwnwwswnenewnwwsewnenwseswesw
+seswneswswsenwwnwse
+nwnwneseeswswnenewneswwnewseswneseene
+swweswneswnenwsewnwneneseenw
+eesenwseswswnenwswnwnwsewwnwsene
+sewnenenenesenwsewnenwwwse
+wenwwweseeeweswwwnwwe
+wsweesenenewnwwnwsenewsenwwsesesenwne
+neeswseenwwswnwswswnw
+nenwswwsewswnenenewsenwsenwnesesenew
+enewnwewneswsewnwswenweswnenwsenwsw
+sweneswneswneneenwnewenewwneswswnese
+swwesenesewenwneswnwwneseswwne
+enesenwswwswneneswsenwnewswseenwsese
+wnwnesenesenenwwnenwsewesewsesesew
+nenewswnwewswnenesenwnesewesw
+eneswnwswnwsenenwnwnwwseeswneewsenese
+neswnwewnwnwseenwseesewsenwsweewe
+wseweeenwnesenwwwswnew"
 
 let tests =
     testList
@@ -97,4 +132,14 @@ let tests =
               let coords_actual = qrCoords directions
 
               Expect.equal coords_actual coords_expected ""
+          }
+          test "Can count number of tiles flipped to black" {
+              // "a line like nwwswee flips the reference tile itself"
+              let input = example
+
+              let count_expected = 10
+
+              let count_actual = part1 input
+
+              Expect.equal count_actual count_expected ""
           } ]
